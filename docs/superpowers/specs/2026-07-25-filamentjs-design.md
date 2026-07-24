@@ -13,8 +13,8 @@ Scope for v1: **panel shell + forms + tables** only. No infolists, actions-as-st
 | Table render | TanStack Table |
 | Form state | TanStack Form |
 | UI components | shadcn/ui |
-| DB | Postgres via Drizzle ORM |
-| Auth | better-auth |
+| DB | Postgres via Drizzle ORM (local Docker Postgres for dev + tests) |
+| Auth | better-auth (authentication) + better-auth admin plugin (role-based authz) |
 | Tests | Vitest + real Postgres (no mocks) |
 | Repo | pnpm monorepo |
 
@@ -160,6 +160,7 @@ Each resource compiles to TanStack Start routes backed by generic page component
 - **Shell**: shadcn sidebar (nav built from resources that opt into navigation, grouped) + topbar + user menu.
 - **Nav**: each resource yields a nav item (label, icon, group, sort, active-when). Groups render as sidebar sections.
 - **Auth**: better-auth guards the `/admin` route tree; unauthenticated users redirect to login.
+- **Authz**: better-auth admin plugin provides roles. Resources gate view/create/edit/delete by role; loaders/mutations check the session role server-side.
 
 ## Data flow
 

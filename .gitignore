@@ -4,3 +4,6 @@ dist
 .output
 .nitro
 .tanstack
+
+# playground generated
+apps/playground/src/routeTree.gen.ts
