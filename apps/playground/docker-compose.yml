@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: filamentjs-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: filamentjs
+      POSTGRES_PASSWORD: filamentjs
+      POSTGRES_DB: filamentjs
+    ports:
+      - "5432:5432"
+    volumes:
+      - filamentjs-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U filamentjs -d filamentjs"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  filamentjs-pgdata:
