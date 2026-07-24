@@ -26,6 +26,9 @@ importers:
       '@filamentjs/forms':
         specifier: workspace:^
         version: link:../../packages/forms
+      '@filamentjs/panels':
+        specifier: workspace:^
+        version: link:../../packages/panels
       '@filamentjs/tables':
         specifier: workspace:^
         version: link:../../packages/tables
