@@ -61,7 +61,9 @@ function PostsList() {
     <div className="mx-auto max-w-5xl p-6">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Posts</h1>
-        <Button>New post</Button>
+        <Link to="/admin/posts/new">
+          <Button>New post</Button>
+        </Link>
       </div>
 
       <form onSubmit={onSearch} className="mb-4 flex gap-2">
@@ -94,12 +96,13 @@ function PostsList() {
                   )}
                 </TableHead>
               ))}
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={spec.columns.length} className="text-center text-muted-foreground">
+                <TableCell colSpan={spec.columns.length + 1} className="text-center text-muted-foreground">
                   No posts found.
                 </TableCell>
               </TableRow>
@@ -109,6 +112,15 @@ function PostsList() {
                   {spec.columns.map((col) => (
                     <TableCell key={col.name}>{renderCell(col.type, row[col.name], col.colors)}</TableCell>
                   ))}
+                  <TableCell>
+                    <Link
+                      to="/admin/posts/$id/edit"
+                      params={{ id: String(row.id) }}
+                      className="text-sm hover:underline"
+                    >
+                      Edit
+                    </Link>
+                  </TableCell>
                 </TableRow>
               ))
             )}
