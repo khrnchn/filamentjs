@@ -17,6 +17,12 @@ function RootComponent() {
   return (
     <html lang="en">
       <head>
+        {/* Apply the saved theme before paint to avoid a flash of the wrong theme. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}})()`,
+          }}
+        />
         <HeadContent />
       </head>
       <body>
