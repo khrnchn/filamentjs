@@ -74,29 +74,32 @@ The pure packages have no React, no DB, and no framework code. They are fully un
 Requirements: Node >= 20, pnpm, Docker.
 
 ```bash
-make install       # install workspace dependencies
-make db-push       # start Postgres (Docker) and push the schema
-make dev           # start the playground at http://localhost:3000
+make start
 ```
 
-Create an admin user, sign up then promote to admin:
+That one command onboards from a fresh clone: installs dependencies, brings up Postgres in Docker, pushes the schema, seeds an admin user, and starts the dev server. Then open `http://localhost:3000/admin/posts` and sign in:
+
+```
+email: admin@filamentjs.dev   password: password123
+```
+
+### Creating users from the CLI
+
+No manual SQL or API calls. Create a panel user with one command (the agent-friendly equivalent of Filament's `php artisan make:filament-user`, non-interactive and flag-driven):
 
 ```bash
-# with the dev server running
-curl -X POST http://localhost:3000/api/auth/sign-up/email \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"admin@filamentjs.dev","password":"password123","name":"Admin"}'
-
-docker exec filamentjs-pg psql -U filamentjs -d filamentjs \
-  -c "update \"user\" set role='admin' where email='admin@filamentjs.dev'"
+make user EMAIL=you@example.com PASSWORD=secret123 ROLE=admin
 ```
 
-Then open `http://localhost:3000/admin/posts` and sign in.
+It also reads `USER_EMAIL` / `USER_PASSWORD` / `USER_ROLE` env vars, so it drops cleanly into scripts and CI.
 
 ### Make targets
 
 | Target | Does |
 |---|---|
+| `make start` | One command: onboard (deps, DB, schema, admin) then run the dev server |
+| `make setup` | Onboard from a fresh clone without starting the server |
+| `make user` | Create a panel user (`EMAIL=` `PASSWORD=` `[NAME=]` `[ROLE=admin]`) |
 | `make dev` | Start Postgres, then the playground dev server |
 | `make build` | Build every package and the app |
 | `make test` | Run the full Vitest suite |

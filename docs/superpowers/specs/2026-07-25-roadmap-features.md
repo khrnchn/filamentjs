@@ -72,6 +72,26 @@ function formFor<M extends AnyPgTable>(model: M) {
 
 ---
 
+## 5. Agent-friendly CLI (`@filamentjs/cli`)
+
+**Problem:** People increasingly hand setup to AI agents. Onboarding must be one non-interactive command, not a curl + psql ritual. Filament has `php artisan make:filament-user`; we need the same ergonomics, but scriptable.
+
+**Shipped now (playground, via Make):**
+- `make user EMAIL=.. PASSWORD=.. ROLE=admin` (and `USER_*` env vars), a headless user creator using a cookie-plugin-free better-auth instance. See `apps/playground/scripts/make-user.ts`.
+- `make setup` / `make start`, onboard from a fresh clone: install, bring up Postgres in Docker, push schema, seed an admin, optionally run the dev server.
+
+**Full design (publishable `@filamentjs/cli`):** when FilamentJS is installed as a package, a `filament` binary with:
+- `filament init`, scaffold `docker-compose.yml` (Postgres), `.env`, the Drizzle config, an `auth.ts`, and a starter panel into the consumer's project. Bring up the compose stack and push the schema in one step.
+- `filament make:user`, non-interactive user creation (flags + env), what the Make target does today.
+- `filament make:resource <name>`, scaffold a resource file (model binding, form, table stubs).
+- `filament start`, compose up + migrate + dev, the packaged version of `make start`.
+
+Every command must be non-interactive by default (flags/env), print machine-readable results, and use real exit codes, so an agent can drive the whole setup without prompts.
+
+**Effort:** Medium. The commands exist in spirit as Make targets; packaging them into a `bin` with project scaffolding is the work.
+
+---
+
 ## Hardening backlog (from Codex review of core/forms/tables)
 
 Fix opportunistically; most are edge cases not hit by current usage.

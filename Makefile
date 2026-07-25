@@ -1,13 +1,27 @@
 .DEFAULT_GOAL := help
 PG := cd apps/playground &&
 
-.PHONY: help install dev build test typecheck db-up db-down db-push db-reset auth-generate clean
+.PHONY: help install start setup user dev build test typecheck db-up db-down db-push db-reset auth-generate clean
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
 install: ## Install all workspace dependencies
 	pnpm install
+
+start: setup ## One command: onboard (deps, DB, schema, admin) then run the dev server
+	$(MAKE) dev
+
+setup: install db-push ## Onboard from a fresh clone: install, start DB, push schema, seed an admin
+	$(PG) USER_EMAIL=admin@filamentjs.dev USER_PASSWORD=password123 USER_ROLE=admin pnpm make:user || true
+	@echo ""
+	@echo "Ready. Run 'make dev', then sign in at http://localhost:3000/admin/posts"
+	@echo "  email: admin@filamentjs.dev   password: password123"
+
+user: db-up ## Create a panel user (EMAIL= PASSWORD= [NAME=] [ROLE=admin])
+	@test -n "$(EMAIL)" || (echo "EMAIL= is required" && exit 1)
+	@test -n "$(PASSWORD)" || (echo "PASSWORD= is required" && exit 1)
+	$(PG) pnpm make:user --email "$(EMAIL)" --password "$(PASSWORD)" --name "$(NAME)" --role "$(ROLE)"
 
 dev: db-up ## Start the playground dev server (starts Postgres first)
 	$(PG) pnpm dev
