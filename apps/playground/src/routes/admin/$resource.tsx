@@ -11,69 +11,23 @@ import {
   type FormCell,
 } from '~/server/resource-fns';
 import { ActionModal } from '~/components/action-modal';
+import {
+  DEFAULT_PAGE_SIZE,
+  parseSearch,
+  searchToTableParams,
+  type ResourceSearch,
+} from '~/filament/table-search-params';
 import type { ResolvedNode } from '@filamentjs/forms';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '~/components/ui/table';
 import { Input } from '~/components/ui/input';
 import { Button } from '~/components/ui/button';
 import { Badge } from '~/components/ui/badge';
 
-type ResourceSearch = {
-  search?: string;
-  sort?: string;
-  dir?: 'asc' | 'desc';
-  page: number;
-  perPage?: number;
-  hidden?: string;
-} & Record<string, string | number | undefined>;
-
-const DEFAULT_PAGE_SIZE = 10;
-
 export const Route = createFileRoute('/admin/$resource')({
-  validateSearch: (search: Record<string, unknown>): ResourceSearch => {
-    const parsed: ResourceSearch = {
-      search: typeof search.search === 'string' && search.search ? search.search : undefined,
-      sort: typeof search.sort === 'string' && search.sort ? search.sort : undefined,
-      dir: search.dir === 'desc' ? 'desc' : search.dir === 'asc' ? 'asc' : undefined,
-      page: Number(search.page) > 0 ? Number(search.page) : 1,
-      perPage: Number(search.perPage) > 0 ? Number(search.perPage) : DEFAULT_PAGE_SIZE,
-      hidden: typeof search.hidden === 'string' && search.hidden ? search.hidden : undefined,
-    };
-
-    // The router parses "true" and "1" into a boolean or number, so filter values are
-    // normalized back to strings rather than dropped for not being strings already.
-    for (const [key, value] of Object.entries(search)) {
-      if (!key.startsWith('filter_') && !key.startsWith('col_')) continue;
-      if (value === undefined || value === null || value === '') continue;
-      parsed[key] = String(value);
-    }
-
-    return parsed;
-  },
+  validateSearch: parseSearch,
   loaderDeps: ({ search }) => search,
-  loader: ({ params, deps }) => {
-    const filters: Record<string, unknown> = Object.create(null);
-    const columnSearches: Record<string, string> = Object.create(null);
-    for (const [key, value] of Object.entries(deps)) {
-      if (value === undefined) continue;
-      if (key.startsWith('filter_')) filters[key.slice('filter_'.length)] = String(value);
-      if (key.startsWith('col_')) columnSearches[key.slice('col_'.length)] = String(value);
-    }
-
-    return listResource({
-      data: {
-        slug: params.resource,
-        params: {
-          search: deps.search,
-          sort: deps.sort,
-          dir: deps.dir,
-          filters,
-          columnSearches,
-          page: deps.page,
-          pageSize: deps.perPage ?? DEFAULT_PAGE_SIZE,
-        },
-      },
-    });
-  },
+  loader: ({ params, deps }) =>
+    listResource({ data: { slug: params.resource, params: searchToTableParams(deps) } }),
   component: ResourceList,
 });
 
