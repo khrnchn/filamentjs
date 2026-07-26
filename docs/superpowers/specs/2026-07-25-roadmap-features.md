@@ -45,6 +45,14 @@ function formFor<M extends AnyPgTable>(model: M) {
 
 **Effort:** Medium-High. Needs Drizzle relational-query wiring and an options-loading contract for the select.
 
+**Shipped.**
+- **Read:** a resource declares `relations: { author: user }`; any dot-path column makes `resolveQuery` group the paths into a `with` clause and read through `db.query.<key>.findMany`, falling back to the flat select when there are none. The list route resolves cells with `resolveColumnValue`, so `author.name` walks the nested row. One level deep.
+- **Write:** `f.relationSelect('authorId').relatedTo(user, { label: 'name' })` stores the FK scalar and validates as a single non-empty string. The pure packages never query: `resolveSchema` only carries `options`, and the playground loads them from the related table (100 rows, ordered by label) after resolving, so the `model` reference never crosses the wire.
+- **Typing:** declared relations widen the accepted names to `` `${relation}.${column}` ``, still checked against the related model, so `author.nick` and `editor.name` are compile errors and dot paths stay rejected when no relations are declared.
+- Relation columns are read-only: search, filters and sort skip them (sorting on one is ignored rather than fatal).
+
+**Still open:** sorting/filtering on relation columns (needs joins), searchable relation selects for large tables (currently a 100-row option list).
+
 ---
 
 ## 3. Mutation error surfacing + toasts + pending UI

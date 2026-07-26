@@ -43,4 +43,19 @@ describe('resolveSchema', () => {
     expect(spec!.options).toEqual({ admin: 'Admin' });
     expect(spec!.rules).toEqual([{ name: 'required' }]);
   });
+  it('resolves relationSelect options without serializing its model', () => {
+    const nodes = buildSchema([
+      f
+        .relationSelect('authorId')
+        .relatedTo({ table: 'user' }, { label: 'name' })
+        .options({ 'user-1': 'Ada' }),
+    ]);
+    const [spec] = resolveSchema(nodes, {});
+    expect(spec).toMatchObject({
+      type: 'relationSelect',
+      name: 'authorId',
+      options: { 'user-1': 'Ada' },
+    });
+    expect(JSON.stringify(spec)).not.toContain('"model"');
+  });
 });

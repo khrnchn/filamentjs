@@ -9,6 +9,19 @@ describe('f factory: fields', () => {
     const node = f.select('role').options({ admin: 'Admin' }).build();
     expect(node).toMatchObject({ type: 'select', name: 'role', options: { admin: 'Admin' } });
   });
+  it('creates a relation select for a related model', () => {
+    const user = { table: 'user' };
+    const node = f.relationSelect('authorId').relatedTo(user, { label: 'name' }).build();
+    expect(node).toMatchObject({
+      type: 'relationSelect',
+      name: 'authorId',
+      relation: {
+        model: user,
+        labelColumn: 'name',
+        valueColumn: 'id',
+      },
+    });
+  });
   it('exposes email() on text builders', () => {
     expect(f.text('email').email().build().rules).toEqual([{ name: 'email' }]);
   });

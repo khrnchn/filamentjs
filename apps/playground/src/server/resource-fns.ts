@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
-import { eq, getTableColumns } from 'drizzle-orm';
+import { asc, eq, getTableColumns } from 'drizzle-orm';
 import type { PgTable, PgColumn } from 'drizzle-orm/pg-core';
 import { resolveTableSpec, type TableParams, type TableSpec } from '@filamentjs/tables';
 import {
@@ -8,6 +8,7 @@ import {
   dehydrate,
   resolveSchema,
   compileValidation,
+  type FormFieldNode,
   type ResolvedNode,
 } from '@filamentjs/forms';
 import { authorizeResource, type PolicyAction } from '@filamentjs/panels';
@@ -99,6 +100,36 @@ export const getResourceForm = createServerFn({ method: 'GET' })
     const schema = buildSchema(resource.form);
     const values = hydrate(schema, record) as Record<string, FormCell>;
     const spec = resolveSchema(schema, values);
+    const pending = schema.map((node, index) => ({
+      node: node as FormFieldNode,
+      resolved: spec[index]!,
+    }));
+
+    while (pending.length > 0) {
+      const { node, resolved } = pending.shift()!;
+      if (node.relation) {
+        const relatedModel = node.relation.model as PgTable;
+        const columns = getTableColumns(relatedModel) as Record<string, PgColumn>;
+        const valueColumn = columns[node.relation.valueColumn]!;
+        const labelColumn = columns[node.relation.labelColumn]!;
+        const rows = await db
+          .select({ value: valueColumn, label: labelColumn })
+          .from(relatedModel)
+          .orderBy(asc(labelColumn))
+          .limit(100);
+        resolved.options = Object.fromEntries(
+          rows.map((row) => [String(row.value), String(row.label)]),
+        );
+      }
+
+      node.children?.forEach((child, index) => {
+        pending.push({
+          node: child as FormFieldNode,
+          resolved: resolved.children![index]!,
+        });
+      });
+    }
+
     return { spec, values };
   });
 

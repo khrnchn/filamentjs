@@ -22,6 +22,12 @@ describe('defineResource', () => {
     expect(r.nav.group).toBe('Content');
     expect(r.roles).toEqual(['admin']);
   });
+  it('defaults relations to an empty map and keeps declared ones', () => {
+    const related = { name: 'users' };
+    const base = { name: 'Post', slug: 'posts', model: {}, form: [], table };
+    expect(defineResource(base).relations).toEqual({});
+    expect(defineResource({ ...base, relations: { author: related } }).relations).toEqual({ author: related });
+  });
   it('resolves a form closure with the field factory', () => {
     const r = defineResource({
       name: 'Post', slug: 'posts', model: {},

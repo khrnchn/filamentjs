@@ -38,6 +38,40 @@ defineResource({
     }),
 });
 
+// Declared relations widen the accepted names with `relation.column` paths.
+const users = pgTable('user', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+});
+
+defineResource({
+  name: 'Post',
+  slug: 'posts',
+  model: posts,
+  relations: { author: users },
+  form: (f) => [f.text('title')],
+  table: (t) =>
+    buildTable({
+      columns: [
+        t.text('author.name'),
+        // @ts-expect-error 'nick' is not a column of the related users table
+        t.text('author.nick'),
+        // @ts-expect-error 'editor' is not a declared relation
+        t.text('editor.name'),
+      ],
+    }),
+});
+
+// Without a relations declaration, dot paths stay rejected.
+defineResource({
+  name: 'Post',
+  slug: 'posts',
+  model: posts,
+  form: [],
+  // @ts-expect-error no relations declared, so 'author.name' is not a valid column
+  table: (t) => buildTable({ columns: [t.text('author.name')] }),
+});
+
 // Policies get the model's row type.
 defineResource({
   name: 'Post',

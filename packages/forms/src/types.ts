@@ -20,6 +20,11 @@ export interface FormFieldNode extends FieldNode {
   helperText?: Prop<string>;
   rules: ValidationRule[];
   options?: Record<string, string>;
+  relation?: {
+    model: unknown;
+    labelColumn: string;
+    valueColumn: string;
+  };
   live?: boolean;
 }
 

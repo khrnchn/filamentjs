@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router';
 import type { FormEvent } from 'react';
+import { resolveColumnValue, type ColumnNode } from '@filamentjs/tables';
 import { listResource } from '~/server/resource-fns';
 import { deleteResource } from '~/server/resource-fns';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '~/components/ui/table';
@@ -119,7 +120,11 @@ function ResourceList() {
               (rows as Array<Record<string, unknown>>).map((row, i) => (
                 <TableRow key={i}>
                   {spec.columns.map((col) => (
-                    <TableCell key={col.name}>{renderCell(col.type, row[col.name])}</TableCell>
+                    <TableCell key={col.name}>
+                      {/* ColumnSpec widens `type` to string for serialization; the resolver
+                          only reads `name`/`accessor`, so it is safe to narrow back. */}
+                      {renderCell(col.type, resolveColumnValue(row, col as ColumnNode))}
+                    </TableCell>
                   ))}
                   <TableCell className="flex gap-3">
                     <Link

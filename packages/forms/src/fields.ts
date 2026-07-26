@@ -70,3 +70,14 @@ export class SelectFieldBuilder extends FieldBuilder {
     return this;
   }
 }
+
+export class RelationSelectFieldBuilder extends SelectFieldBuilder {
+  relatedTo(model: unknown, opts: { label: string; value?: string }): this {
+    this.node.relation = {
+      model,
+      labelColumn: opts.label,
+      valueColumn: opts.value ?? 'id',
+    };
+    return this;
+  }
+}

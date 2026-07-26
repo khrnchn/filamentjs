@@ -63,7 +63,7 @@ export function FormRenderer({ spec, initialValues, errors, onSubmit }: FormRend
           onChange={(e) => setValue(name, e.target.value)}
         />
       );
-    } else if (node.type === 'select') {
+    } else if (node.type === 'select' || node.type === 'relationSelect') {
       control = (
         <select
           id={name}

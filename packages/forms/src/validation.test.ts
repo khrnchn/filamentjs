@@ -33,6 +33,14 @@ describe('compileValidation', () => {
     expect(schema.safeParse({ tags: [] }).success).toBe(false);
     expect(schema.safeParse({ tags: ['a'] }).success).toBe(true);
   });
+  it('validates a required relationSelect as one non-empty string', () => {
+    const schema = compileValidation(
+      buildSchema([f.relationSelect('authorId').relatedTo({}, { label: 'name' }).required()]),
+    );
+    expect(schema.safeParse({ authorId: '' }).success).toBe(false);
+    expect(schema.safeParse({ authorId: ['user-1'] }).success).toBe(false);
+    expect(schema.safeParse({ authorId: 'user-1' }).success).toBe(true);
+  });
   it('ignores the unique rule at compile time', () => {
     const schema = compileValidation(buildSchema([f.text('email').required().unique()]));
     expect(schema.safeParse({ email: 'a@b.co' }).success).toBe(true);

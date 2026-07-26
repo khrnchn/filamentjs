@@ -1,10 +1,16 @@
-import { FieldBuilder, SelectFieldBuilder, TextFieldBuilder } from './fields.js';
+import {
+  FieldBuilder,
+  RelationSelectFieldBuilder,
+  SelectFieldBuilder,
+  TextFieldBuilder,
+} from './fields.js';
 import { GridBuilder, SectionBuilder, type AnyBuilder } from './layout.js';
 
 export const f = {
   text: (name: string) => new TextFieldBuilder('text', name),
   textarea: (name: string) => new TextFieldBuilder('textarea', name),
   select: (name: string) => new SelectFieldBuilder('select', name),
+  relationSelect: (name: string) => new RelationSelectFieldBuilder('relationSelect', name),
   multiSelect: (name: string) => new SelectFieldBuilder('multiSelect', name),
   radio: (name: string) => new SelectFieldBuilder('radio', name),
   checkboxList: (name: string) => new SelectFieldBuilder('checkboxList', name),

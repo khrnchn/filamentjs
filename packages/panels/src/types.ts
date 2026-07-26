@@ -14,8 +14,15 @@ type ScopedNames<T, Names extends string> = {
     : T[K];
 };
 
-export type Fields<Model> = ScopedNames<typeof f, ColumnNames<Model>>;
-export type Columns<Model> = ScopedNames<typeof t, ColumnNames<Model>>;
+// Declared relations contribute `relation.column` paths, typed against the related model.
+type RelationPaths<Relations> = {
+  [K in keyof Relations & string]: `${K}.${ColumnNames<Relations[K]>}`;
+}[keyof Relations & string];
+
+type Names<Model, Relations> = ColumnNames<Model> | RelationPaths<Relations>;
+
+export type Fields<Model, Relations = unknown> = ScopedNames<typeof f, Names<Model, Relations>>;
+export type Columns<Model, Relations = unknown> = ScopedNames<typeof t, Names<Model, Relations>>;
 
 // Drizzle tables expose their row type at `$inferSelect`; a plain model is its own row type.
 type RowOf<M> = M extends { $inferSelect: infer R } ? R : M;
@@ -49,13 +56,15 @@ export interface NavMeta {
   sort?: number;
 }
 
-export interface ResourceInput<Model = unknown> {
+export interface ResourceInput<Model = unknown, Relations = unknown> {
   name: string;
   pluralName?: string;
   slug: string;
   model: Model;
-  form: AnyBuilder[] | ((f: Fields<Model>) => AnyBuilder[]);
-  table: TableConfig | ((t: Columns<Model>) => TableConfig);
+  // related models keyed by relation name, as declared in the Drizzle `relations()` call
+  relations?: Relations;
+  form: AnyBuilder[] | ((f: Fields<Model, Relations>) => AnyBuilder[]);
+  table: TableConfig | ((t: Columns<Model, Relations>) => TableConfig);
   nav?: NavMeta;
   roles?: string[];
   can?: ResourcePolicies<Model>;
@@ -66,6 +75,7 @@ export interface Resource<Model = unknown> {
   pluralName: string;
   slug: string;
   model: Model;
+  relations: Record<string, unknown>;
   form: AnyBuilder[];
   table: TableConfig;
   nav: NavMeta;
