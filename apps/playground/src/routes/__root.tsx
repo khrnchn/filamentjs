@@ -1,4 +1,5 @@
 import { Outlet, createRootRoute, HeadContent, Scripts } from '@tanstack/react-router';
+import { ToastProvider } from '~/components/toaster';
 import appCss from '../styles.css?url';
 
 export const Route = createRootRoute({
@@ -26,7 +27,9 @@ function RootComponent() {
         <HeadContent />
       </head>
       <body>
-        <Outlet />
+        <ToastProvider>
+          <Outlet />
+        </ToastProvider>
         <Scripts />
       </body>
     </html>

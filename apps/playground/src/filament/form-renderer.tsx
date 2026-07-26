@@ -9,7 +9,7 @@ interface FormRendererProps {
   spec: ResolvedNode[];
   initialValues: Record<string, unknown>;
   errors?: Record<string, string>;
-  onSubmit: (values: Record<string, unknown>) => void;
+  onSubmit: (values: Record<string, unknown>) => void | Promise<void>;
 }
 
 const inputClass =
@@ -17,14 +17,20 @@ const inputClass =
 
 export function FormRenderer({ spec, initialValues, errors, onSubmit }: FormRendererProps) {
   const [values, setValues] = useState<Record<string, unknown>>(initialValues);
+  const [submitting, setSubmitting] = useState(false);
 
   const setValue = (name: string, value: unknown) => {
     setValues((prev) => ({ ...prev, [name]: value }));
   };
 
-  const submit = (e: FormEvent<HTMLFormElement>) => {
+  const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    onSubmit(values);
+    setSubmitting(true);
+    try {
+      await onSubmit(values);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const renderNode = (node: ResolvedNode, key: number) => {
@@ -118,7 +124,9 @@ export function FormRenderer({ spec, initialValues, errors, onSubmit }: FormRend
     <form onSubmit={submit} className="flex flex-col gap-4">
       {spec.map(renderNode)}
       <div>
-        <Button type="submit">Save</Button>
+        <Button type="submit" disabled={submitting}>
+          {submitting ? 'Saving...' : 'Save'}
+        </Button>
       </div>
     </form>
   );

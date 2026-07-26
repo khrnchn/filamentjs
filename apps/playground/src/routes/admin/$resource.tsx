@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router';
-import type { FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { resolveColumnValue, type ColumnNode } from '@filamentjs/tables';
+import { useToast } from '~/components/toaster';
 import { listResource } from '~/server/resource-fns';
 import { deleteResource } from '~/server/resource-fns';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '~/components/ui/table';
@@ -53,6 +54,8 @@ function ResourceList() {
   const { search, sort, dir, page } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const router = useRouter();
+  const toast = useToast();
+  const [deleting, setDeleting] = useState<string | null>(null);
   const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const onSearch = (e: FormEvent<HTMLFormElement>) => {
@@ -62,8 +65,18 @@ function ResourceList() {
   };
 
   const onDelete = async (id: string) => {
-    await deleteResource({ data: { slug: resource, id } });
-    router.invalidate();
+    setDeleting(id);
+    try {
+      const result = await deleteResource({ data: { slug: resource, id } });
+      if (!result.ok) {
+        toast(result.error ?? 'Delete failed', 'error');
+        return;
+      }
+      toast('Deleted');
+      await router.invalidate();
+    } finally {
+      setDeleting(null);
+    }
   };
 
   return (
@@ -137,9 +150,10 @@ function ResourceList() {
                     <button
                       type="button"
                       onClick={() => onDelete(String(row.id))}
-                      className="text-sm text-destructive hover:underline"
+                      disabled={deleting === String(row.id)}
+                      className="text-sm text-destructive hover:underline disabled:opacity-50"
                     >
-                      Delete
+                      {deleting === String(row.id) ? 'Deleting...' : 'Delete'}
                     </button>
                   </TableCell>
                 </TableRow>

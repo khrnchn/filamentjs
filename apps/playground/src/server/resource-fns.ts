@@ -28,6 +28,7 @@ export interface ListResponse {
 }
 
 export interface FormResponse {
+  title: string;
   spec: ResolvedNode[];
   values: Record<string, FormCell>;
 }
@@ -71,6 +72,18 @@ async function gateResource(slug: string, action: PolicyAction, id?: string) {
   });
   if (!allowed) return { error: 'unauthorized' };
   return { resource, record };
+}
+
+// Drizzle wraps driver errors, so the Postgres SQLSTATE lives on the cause. Anything
+// unrecognised stays generic: the raw message carries the whole failing query.
+function databaseMessage(e: unknown): string {
+  console.error('Mutation failed', e);
+  const code =
+    (e as { code?: string }).code ?? ((e as { cause?: { code?: string } }).cause?.code ?? '');
+  if (code === '23505') return 'That value is already taken.';
+  if (code === '23503') return 'Another record still references this one.';
+  if (code === '23502') return 'A required value is missing.';
+  return 'Could not save. Please try again.';
 }
 
 async function authorize(slug: string, action: PolicyAction, id?: string) {
@@ -130,7 +143,7 @@ export const getResourceForm = createServerFn({ method: 'GET' })
       });
     }
 
-    return { spec, values };
+    return { title: resource.name, spec, values };
   });
 
 export const saveResource = createServerFn({ method: 'POST' })
@@ -154,13 +167,18 @@ export const saveResource = createServerFn({ method: 'POST' })
 
     const record = result.data as Record<string, unknown>;
 
-    if (data.id) {
-      await db.update(model).set(record).where(eq(idCol, data.id));
-      return { ok: true, id: data.id };
+    // Constraint violations and other driver errors are not field errors, so they
+    // come back as { ok: false, error } for the client to surface as a toast.
+    try {
+      if (data.id) {
+        await db.update(model).set(record).where(eq(idCol, data.id));
+        return { ok: true, id: data.id };
+      }
+      const inserted = await db.insert(model).values(record).returning({ id: idCol });
+      return { ok: true, id: String((inserted[0] as { id: unknown }).id) };
+    } catch (e) {
+      return { ok: false, error: databaseMessage(e) };
     }
-
-    const inserted = await db.insert(model).values(record).returning({ id: idCol });
-    return { ok: true, id: String((inserted[0] as { id: unknown }).id) };
   });
 
 export const deleteResource = createServerFn({ method: 'POST' })
@@ -170,6 +188,10 @@ export const deleteResource = createServerFn({ method: 'POST' })
     if ('error' in gate) return { ok: false, error: gate.error };
     const model = gate.resource.model as PgTable;
     const idCol = (getTableColumns(model) as Record<string, PgColumn>).id!;
-    await db.delete(model).where(eq(idCol, data.id));
+    try {
+      await db.delete(model).where(eq(idCol, data.id));
+    } catch (e) {
+      return { ok: false, error: databaseMessage(e) };
+    }
     return { ok: true };
   });

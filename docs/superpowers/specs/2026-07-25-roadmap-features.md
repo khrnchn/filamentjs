@@ -66,6 +66,12 @@ function formFor<M extends AnyPgTable>(model: M) {
 
 **Effort:** Low-Medium. Mostly wiring; one small dependency (sonner) or a ~40-line toaster.
 
+**Shipped.**
+- **Toasts:** an in-house provider at the app root (no dependency). Create/update/delete confirm on success; non-field failures toast as errors.
+- **Error surfacing:** `saveResource`/`deleteResource` no longer let driver errors escape as thrown server-fn failures. They catch, log server-side, and map SQLSTATE to a safe message (`23505` taken, `23503` still referenced, `23502` missing), because the raw Drizzle message embeds the whole failing query. Field-level Zod errors still render inline as before.
+- **Pending UI:** the form disables Save and shows `Saving...` while a submit is in flight; row delete shows `Deleting...` and disables itself.
+- Form responses now carry the resource name, so headings read "New Post" / "Edit Post" and toasts name the record.
+
 ---
 
 ## 4. Server-side authorization on mutations
@@ -130,8 +136,11 @@ Note: `false`/`0`/`''`/`null` are handled correctly through hydrate/dehydrate an
 
 ```
 v1 panel ──► #1 typed binding ──► #4 policies ──► #2 relationships ──► #3 UX polish
-   done            done              done             next
+   done            done              done              done               done
                                     │
                         hardening backlog folded in opportunistically (all but 2 items done)
 ```
+
+Remaining from this spec: `@filamentjs/cli` packaging (#5, Make targets exist), relation sorting/filtering,
+searchable relation selects, per-row action hiding in the UI, and the two open hardening rows.
 Each feature ships as its own spec-derived plan, built and tested the same way as the v1 packages.

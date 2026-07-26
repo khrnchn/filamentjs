@@ -1,8 +1,17 @@
-import { createFileRoute, redirect, Link, Outlet, useNavigate } from '@tanstack/react-router';
+import {
+  createFileRoute,
+  redirect,
+  Link,
+  Outlet,
+  useNavigate,
+  useRouterState,
+  type ErrorComponentProps,
+} from '@tanstack/react-router';
 import { panel } from '~/filament/panel';
 import { getSession } from '~/server/session';
 import { authClient } from '~/lib/auth-client';
 import { Button } from '~/components/ui/button';
+import { ErrorPanel } from '~/components/error-panel';
 import { ThemeToggle } from '~/components/theme-toggle';
 
 export const Route = createFileRoute('/admin')({
@@ -11,12 +20,14 @@ export const Route = createFileRoute('/admin')({
     if (!session) throw redirect({ to: '/login' });
     return { session };
   },
+  errorComponent: AdminShell,
   component: AdminShell,
 });
 
-function AdminShell() {
+function AdminShell({ error, reset }: Partial<ErrorComponentProps> = {}) {
   const { session } = Route.useRouteContext();
   const navigate = useNavigate();
+  const isLoading = useRouterState({ select: (state) => state.isLoading });
 
   const signOut = async () => {
     await authClient.signOut();
@@ -63,8 +74,27 @@ function AdminShell() {
             </Button>
           </div>
         </header>
-        <main className="flex-1">
-          <Outlet />
+        <main className="relative flex-1">
+          {isLoading ? (
+            <div
+              role="progressbar"
+              aria-label="Loading page"
+              className="absolute inset-x-0 top-0 z-10 h-0.5 overflow-hidden bg-muted"
+            >
+              <div
+                className="h-full w-1/3 bg-primary"
+                style={{ animation: 'admin-route-loading 1s ease-in-out infinite' }}
+              />
+              <style>{`
+                @keyframes admin-route-loading {
+                  from { transform: translateX(-100%); }
+                  to { transform: translateX(300%); }
+                }
+              `}</style>
+            </div>
+          ) : null}
+
+          {error ? <ErrorPanel error={error} reset={reset} /> : <Outlet />}
         </main>
       </div>
     </div>
