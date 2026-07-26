@@ -292,9 +292,11 @@ actions?: Record<string, ResourceAction<Model>>;
 The table refers to one by name, and the name is typed against the declared keys:
 
 ```ts
-t.action('archive')        // ColumnNames-style narrowing against keyof ResourceInput['actions']
-t.bulkAction('archive')
+t.action('archive')        // narrowed against keyof ResourceInput['actions']
 ```
+
+Built with `t.action` only, no separate `t.bulkAction`: placement in `actions` versus `bulkActions`
+already says whether it runs per row or over a selection, so the second factory would be redundant.
 
 Runner:
 

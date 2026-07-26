@@ -87,6 +87,38 @@ defineResource({
   },
 });
 
+// t.action refers to a declared handler by name, checked against the actions map.
+defineResource({
+  name: 'Post',
+  slug: 'posts',
+  model: posts,
+  form: [],
+  actions: {
+    archive: {
+      label: 'Archive',
+      handler: async ({ records, user }) => ({
+        ok: records.every((record) => record.title !== '') && user.id !== '',
+      }),
+    },
+  },
+  table: (t) =>
+    buildTable({
+      columns: [t.text('title')],
+      actions: [t.action('archive')],
+      // @ts-expect-error 'publish' is not a declared action
+      bulkActions: [t.action('publish')],
+    }),
+});
+
+// With no actions declared, any name is accepted rather than none.
+defineResource({
+  name: 'Post',
+  slug: 'posts',
+  model: posts,
+  form: [],
+  table: (t) => buildTable({ columns: [t.text('title')], actions: [t.action('anything')] }),
+});
+
 // A plain (non-Drizzle) model keeps names unconstrained.
 defineResource({
   name: 'Thing',

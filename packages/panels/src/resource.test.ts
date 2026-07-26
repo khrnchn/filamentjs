@@ -34,6 +34,12 @@ describe('defineResource', () => {
     const r = defineResource({ ...base, infolist: (ii) => [ii.text('title').label('Title')] });
     expect(r.infolist[0]!.build()).toMatchObject({ type: 'text', name: 'title', label: 'Title' });
   });
+  it('defaults actions to an empty map and keeps declared handlers', () => {
+    const base = { name: 'Post', slug: 'posts', model: {}, form: [], table };
+    expect(defineResource(base).actions).toEqual({});
+    const archive = { label: 'Archive', handler: async () => ({ ok: true }) };
+    expect(defineResource({ ...base, actions: { archive } }).actions.archive).toBe(archive);
+  });
   it('resolves a form closure with the field factory', () => {
     const r = defineResource({
       name: 'Post', slug: 'posts', model: {},

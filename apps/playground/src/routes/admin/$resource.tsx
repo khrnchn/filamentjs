@@ -2,7 +2,16 @@ import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-r
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { resolveColumnValue, type ColumnNode } from '@filamentjs/tables';
 import { useToast } from '~/components/toaster';
-import { deleteResource, deleteResources, listResource } from '~/server/resource-fns';
+import {
+  deleteResource,
+  deleteResources,
+  getActionForm,
+  listResource,
+  runResourceAction,
+  type FormCell,
+} from '~/server/resource-fns';
+import { ActionModal } from '~/components/action-modal';
+import type { ResolvedNode } from '@filamentjs/forms';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '~/components/ui/table';
 import { Input } from '~/components/ui/input';
 import { Button } from '~/components/ui/button';
@@ -85,6 +94,13 @@ function ResourceList() {
   const toast = useToast();
   const [deleting, setDeleting] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [running, setRunning] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{
+    name: string;
+    ids: string[];
+    label: string;
+    spec: ResolvedNode[];
+  } | null>(null);
   const selectAllRef = useRef<HTMLInputElement>(null);
   const lastPage = Math.max(1, Math.ceil(total / perPage));
   const hasBulkActions = spec.bulkActions.length > 0;
@@ -109,6 +125,39 @@ function ResourceList() {
   const visibleColumns = spec.columns.filter((column) => !hidden.has(column.name));
   const toggleableColumns = spec.columns.filter((column) => column.toggleable);
   const summarized = spec.columns.filter((column) => column.summarize);
+
+  // A custom action collects its modal schema on click: an empty spec means it runs
+  // straight away, so a list page never pays for modals it does not open.
+  const runAction = async (name: string, ids: string[], requiresConfirmation?: boolean) => {
+    if (requiresConfirmation && !window.confirm(`Run this action on ${ids.length} record${ids.length === 1 ? '' : 's'}?`)) {
+      return;
+    }
+    const form = await getActionForm({ data: { slug: resource, action: name } });
+    if (form.spec.length > 0) {
+      setPendingAction({ name, ids, label: form.label, spec: form.spec });
+      return;
+    }
+    await submitAction(name, ids, {});
+  };
+
+  const submitAction = async (name: string, ids: string[], values: Record<string, unknown>) => {
+    setRunning(true);
+    try {
+      const result = await runResourceAction({
+        data: { slug: resource, action: name, ids, values: values as Record<string, FormCell> },
+      });
+      if (!result.ok) {
+        toast(result.error ?? 'Action failed', 'error');
+        return;
+      }
+      toast(result.message ?? 'Done');
+      setPendingAction(null);
+      setSelected(new Set());
+      await router.invalidate();
+    } finally {
+      setRunning(false);
+    }
+  };
 
   const toggleColumn = (name: string) => {
     const next = new Set(hidden);
@@ -343,6 +392,17 @@ function ResourceList() {
                     ? 'Deleting...'
                     : (action.label ?? action.name[0]!.toUpperCase() + action.name.slice(1))}
                 </Button>
+              ) : action.type === 'custom' ? (
+                <Button
+                  key={action.name}
+                  type="button"
+                  size="sm"
+                  variant={action.destructive ? 'destructive' : 'outline'}
+                  disabled={running}
+                  onClick={() => runAction(action.name, [...selected], action.requiresConfirmation)}
+                >
+                  {action.label ?? action.name}
+                </Button>
               ) : (
                 <Button key={action.name} type="button" size="sm" disabled>
                   {action.label ?? action.name}
@@ -520,6 +580,25 @@ function ResourceList() {
                                 </Link>
                               ) : null;
                             }
+                            if (action.type === 'custom') {
+                              return (
+                                <button
+                                  key={action.name}
+                                  type="button"
+                                  onClick={() =>
+                                    runAction(action.name, [id], action.requiresConfirmation)
+                                  }
+                                  disabled={running}
+                                  className={
+                                    action.destructive
+                                      ? 'text-sm text-destructive hover:underline disabled:opacity-50'
+                                      : 'text-sm hover:underline disabled:opacity-50'
+                                  }
+                                >
+                                  {label}
+                                </button>
+                              );
+                            }
                             if (action.type === 'delete') {
                               return permission?.delete ? (
                                 <button
@@ -564,6 +643,16 @@ function ResourceList() {
           )}
         </Table>
       </div>
+
+      {pendingAction && (
+        <ActionModal
+          label={pendingAction.label}
+          spec={pendingAction.spec}
+          running={running}
+          onCancel={() => setPendingAction(null)}
+          onSubmit={(values) => submitAction(pendingAction.name, pendingAction.ids, values)}
+        />
+      )}
 
       <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
         <span>

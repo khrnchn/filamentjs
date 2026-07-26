@@ -1,5 +1,7 @@
 import { defineResource } from '@filamentjs/panels';
 import { buildTable } from '@filamentjs/tables';
+import { eq } from 'drizzle-orm';
+import { db } from '~/db/client';
 import { posts, user } from '~/db/schema';
 
 export const postsResource = defineResource({
@@ -38,6 +40,24 @@ export const postsResource = defineResource({
       ]),
     ]),
   ],
+  actions: {
+    archive: {
+      label: 'Archive',
+      requiresConfirmation: true,
+      modal: (f) => [f.textarea('body').label('Reason').required().maxLength(200)],
+      can: ({ user }) => user.role === 'admin',
+      handler: async ({ records, values }) => {
+        const reason = String(values.body ?? '');
+        for (const record of records) {
+          await db
+            .update(posts)
+            .set({ published: false, status: 'draft', body: `Archived: ${reason}` })
+            .where(eq(posts.id, record.id));
+        }
+        return { ok: true, message: `Archived ${records.length} post${records.length === 1 ? '' : 's'}` };
+      },
+    },
+  },
   table: (t) =>
     buildTable({
       columns: [
@@ -56,8 +76,8 @@ export const postsResource = defineResource({
         t.select('status').options({ draft: 'Draft', published: 'Published' }),
         t.ternary('published'),
       ],
-      actions: [t.viewAction(), t.editAction(), t.deleteAction()],
-      bulkActions: [t.deleteBulkAction()],
+      actions: [t.viewAction(), t.editAction(), t.action('archive'), t.deleteAction()],
+      bulkActions: [t.deleteBulkAction(), t.action('archive')],
       headerActions: [t.createAction()],
     }),
 });

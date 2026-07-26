@@ -8,10 +8,16 @@ import {
   dehydrate,
   resolveSchema,
   compileValidation,
+  f,
   type FormFieldNode,
   type ResolvedNode,
 } from '@filamentjs/forms';
-import { authorizeResource, type PolicyAction, type Resource } from '@filamentjs/panels';
+import {
+  authorizeResource,
+  type ActionResult,
+  type PolicyAction,
+  type Resource,
+} from '@filamentjs/panels';
 import { resolveInfolist, type InfolistEntryNode, type ResolvedEntry } from '@filamentjs/infolists';
 import type { SchemaNode } from '@filamentjs/core';
 import { db } from '~/db/client';
@@ -323,4 +329,61 @@ export const getResourceView = createServerFn({ method: 'GET' })
     }
 
     return { title: resource.name, spec: resolveInfolist(nodes, row) };
+  });
+
+// Custom actions: the table spec carries only the descriptor, so the client asks for the
+// modal schema on click and posts the collected values back to be run server-side.
+export const getActionForm = createServerFn({ method: 'GET' })
+  .validator((input: { slug: string; action: string }) => input)
+  .handler(async ({ data }): Promise<{ label: string; spec: ResolvedNode[] }> => {
+    const { resource } = await authorize(data.slug, 'view');
+    const action = resource.actions[data.action];
+    if (!action) throw new Error(`Unknown action: ${data.action}`);
+    if (!action.modal) return { label: action.label, spec: [] };
+    const builders = typeof action.modal === 'function' ? action.modal(f) : action.modal;
+    const schema = buildSchema(builders);
+    return { label: action.label, spec: resolveSchema(schema, hydrate(schema)) };
+  });
+
+export const runResourceAction = createServerFn({ method: 'POST' })
+  .validator(
+    (input: { slug: string; action: string; ids: string[]; values: Record<string, FormCell> }) =>
+      input,
+  )
+  .handler(async ({ data }): Promise<ActionResult> => {
+    const gate = await gateResource(data.slug, 'view');
+    if ('error' in gate) return { ok: false, error: gate.error };
+    const action = gate.resource.actions[data.action];
+    if (!action) return { ok: false, error: `Unknown action: ${data.action}` };
+
+    const model = gate.resource.model as PgTable;
+    const idCol = (getTableColumns(model) as Record<string, PgColumn>).id!;
+    const records = data.ids.length
+      ? await db.select().from(model).where(inArray(idCol, data.ids))
+      : [];
+    if (data.ids.length && records.length !== data.ids.length) {
+      return { ok: false, error: 'Some records no longer exist' };
+    }
+
+    const permitted = records.every(
+      (record) => action.can?.({ user: gate.user, record }) ?? true,
+    );
+    if (!permitted) return { ok: false, error: 'unauthorized' };
+
+    let values: Record<string, unknown> = {};
+    if (action.modal) {
+      const builders = typeof action.modal === 'function' ? action.modal(f) : action.modal;
+      const schema = buildSchema(builders);
+      const parsed = compileValidation(schema).safeParse(dehydrate(schema, data.values));
+      if (!parsed.success) {
+        return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+      }
+      values = parsed.data as Record<string, unknown>;
+    }
+
+    try {
+      return await action.handler({ user: gate.user, records, values });
+    } catch (e) {
+      return { ok: false, error: databaseMessage(e) };
+    }
   });
