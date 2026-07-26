@@ -11,5 +11,8 @@
     "@filamentjs/core": "workspace:*",
     "@filamentjs/forms": "workspace:*",
     "@filamentjs/tables": "workspace:*"
+  },
+  "devDependencies": {
+    "drizzle-orm": "^0.45.2"
   }
 }

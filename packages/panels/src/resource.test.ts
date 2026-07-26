@@ -22,4 +22,21 @@ describe('defineResource', () => {
     expect(r.nav.group).toBe('Content');
     expect(r.roles).toEqual(['admin']);
   });
+  it('resolves a form closure with the field factory', () => {
+    const r = defineResource({
+      name: 'Post', slug: 'posts', model: {},
+      form: (ff) => [ff.text('title').label('Title')],
+      table,
+    });
+    expect(r.form).toHaveLength(1);
+    expect(r.form[0]!.build()).toMatchObject({ type: 'text', name: 'title', label: 'Title' });
+  });
+  it('resolves a table closure with the column factory', () => {
+    const r = defineResource({
+      name: 'Post', slug: 'posts', model: {},
+      form: [],
+      table: (tt) => buildTable({ columns: [tt.text('title').sortable()] }),
+    });
+    expect(r.table.columns).toEqual([expect.objectContaining({ name: 'title', sortable: true })]);
+  });
 });

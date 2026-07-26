@@ -10,6 +10,7 @@ import {
   compileValidation,
   type ResolvedNode,
 } from '@filamentjs/forms';
+import { authorizeResource, type PolicyAction } from '@filamentjs/panels';
 import { db } from '~/db/client';
 import { panel } from '~/filament/panel';
 import { currentSession } from './session';
@@ -42,35 +43,45 @@ export interface DeleteResult {
   error?: string;
 }
 
+// Record-level policies need the row before the operation runs, so the gate loads it
+// when an id is given and hands it back for the handler to reuse.
+//
 // Loaders throw on auth failure (the /admin route guard already redirects
 // unauthenticated users; a role mismatch is a hard error). Mutations return an
 // { ok: false, error } shape so the client can surface it without a crash.
-async function authorize(slug: string) {
+async function gateResource(slug: string, action: PolicyAction, id?: string) {
   const resource = panel.getResource(slug);
-  if (!resource) throw new Error(`Unknown resource: ${slug}`);
+  if (!resource) return { error: `Unknown resource: ${slug}` };
   const session = await currentSession();
-  if (!session) throw new Error('unauthorized');
-  if (resource.roles.length && !resource.roles.includes(session.user.role ?? '')) {
-    throw new Error('unauthorized');
+  if (!session) return { error: 'unauthorized' };
+
+  const model = resource.model as PgTable;
+  let record: Record<string, unknown> | undefined;
+  if (id) {
+    const idCol = (getTableColumns(model) as Record<string, PgColumn>).id!;
+    const rows = await db.select().from(model).where(eq(idCol, id)).limit(1);
+    record = rows[0];
+    if (!record) return { error: `No ${resource.name} with id ${id}` };
   }
-  return resource;
+
+  const allowed = authorizeResource(resource, action, {
+    user: { id: session.user.id, role: session.user.role },
+    record,
+  });
+  if (!allowed) return { error: 'unauthorized' };
+  return { resource, record };
 }
 
-async function authorizeMutation(slug: string) {
-  const resource = panel.getResource(slug);
-  if (!resource) return { error: `Unknown resource: ${slug}` as const };
-  const session = await currentSession();
-  if (!session) return { error: 'unauthorized' as const };
-  if (resource.roles.length && !resource.roles.includes(session.user.role ?? '')) {
-    return { error: 'unauthorized' as const };
-  }
-  return { resource };
+async function authorize(slug: string, action: PolicyAction, id?: string) {
+  const gate = await gateResource(slug, action, id);
+  if ('error' in gate) throw new Error(gate.error);
+  return gate;
 }
 
 export const listResource = createServerFn({ method: 'GET' })
   .validator((input: { slug: string; params: TableParams }) => input)
   .handler(async ({ data }): Promise<ListResponse> => {
-    const resource = await authorize(data.slug);
+    const { resource } = await authorize(data.slug, 'view');
     const model = resource.model as PgTable;
     const result = await resolveQuery(model, resource.table, data.params);
     return {
@@ -84,15 +95,8 @@ export const listResource = createServerFn({ method: 'GET' })
 export const getResourceForm = createServerFn({ method: 'GET' })
   .validator((input: { slug: string; id?: string }) => input)
   .handler(async ({ data }): Promise<FormResponse> => {
-    const resource = await authorize(data.slug);
-    const model = resource.model as PgTable;
-    const idCol = (getTableColumns(model) as Record<string, PgColumn>).id!;
+    const { resource, record } = await authorize(data.slug, data.id ? 'update' : 'create', data.id);
     const schema = buildSchema(resource.form);
-    let record: Record<string, unknown> | undefined;
-    if (data.id) {
-      const rows = await db.select().from(model).where(eq(idCol, data.id)).limit(1);
-      record = rows[0];
-    }
     const values = hydrate(schema, record) as Record<string, FormCell>;
     const spec = resolveSchema(schema, values);
     return { spec, values };
@@ -101,7 +105,7 @@ export const getResourceForm = createServerFn({ method: 'GET' })
 export const saveResource = createServerFn({ method: 'POST' })
   .validator((input: { slug: string; id?: string; values: Record<string, FormCell> }) => input)
   .handler(async ({ data }): Promise<SaveResult> => {
-    const gate = await authorizeMutation(data.slug);
+    const gate = await gateResource(data.slug, data.id ? 'update' : 'create', data.id);
     if ('error' in gate) return { ok: false, error: gate.error };
     const resource = gate.resource;
     const model = resource.model as PgTable;
@@ -131,7 +135,7 @@ export const saveResource = createServerFn({ method: 'POST' })
 export const deleteResource = createServerFn({ method: 'POST' })
   .validator((input: { slug: string; id: string }) => input)
   .handler(async ({ data }): Promise<DeleteResult> => {
-    const gate = await authorizeMutation(data.slug);
+    const gate = await gateResource(data.slug, 'delete', data.id);
     if ('error' in gate) return { ok: false, error: gate.error };
     const model = gate.resource.model as PgTable;
     const idCol = (getTableColumns(model) as Record<string, PgColumn>).id!;
