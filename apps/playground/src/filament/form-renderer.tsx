@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { ResolvedNode } from '@filamentjs/forms';
 import { Input } from '~/components/ui/input';
 import { Textarea } from '~/components/ui/textarea';
@@ -10,17 +10,55 @@ interface FormRendererProps {
   initialValues: Record<string, unknown>;
   errors?: Record<string, string>;
   onSubmit: (values: Record<string, unknown>) => void | Promise<void>;
+  onLiveChange?: (values: Record<string, unknown>) => Promise<ResolvedNode[]>;
 }
 
 const inputClass =
   'flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring';
 
-export function FormRenderer({ spec, initialValues, errors, onSubmit }: FormRendererProps) {
+export function FormRenderer({
+  spec,
+  initialValues,
+  errors,
+  onSubmit,
+  onLiveChange,
+}: FormRendererProps) {
+  const [resolvedSpec, setResolvedSpec] = useState(spec);
   const [values, setValues] = useState<Record<string, unknown>>(initialValues);
   const [submitting, setSubmitting] = useState(false);
+  const valuesRef = useRef(values);
+  const liveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const liveSequence = useRef(0);
 
-  const setValue = (name: string, value: unknown) => {
-    setValues((prev) => ({ ...prev, [name]: value }));
+  useEffect(() => {
+    setResolvedSpec(spec);
+  }, [spec]);
+
+  useEffect(
+    () => () => {
+      if (liveTimer.current) clearTimeout(liveTimer.current);
+      liveSequence.current += 1;
+    },
+    [],
+  );
+
+  const setValue = (node: ResolvedNode, value: unknown) => {
+    if (!node.name) return;
+    const nextValues = { ...valuesRef.current, [node.name]: value };
+    valuesRef.current = nextValues;
+    setValues(nextValues);
+
+    if (!node.live || !onLiveChange) return;
+    const sequence = ++liveSequence.current;
+    if (liveTimer.current) clearTimeout(liveTimer.current);
+    liveTimer.current = setTimeout(async () => {
+      try {
+        const nextSpec = await onLiveChange(nextValues);
+        if (sequence === liveSequence.current) setResolvedSpec(nextSpec);
+      } catch (error) {
+        console.error('Could not refresh form', error);
+      }
+    }, 300);
   };
 
   const submit = async (e: FormEvent<HTMLFormElement>) => {
@@ -66,7 +104,7 @@ export function FormRenderer({ spec, initialValues, errors, onSubmit }: FormRend
           id={name}
           value={value == null ? '' : String(value)}
           disabled={node.disabled}
-          onChange={(e) => setValue(name, e.target.value)}
+          onChange={(e) => setValue(node, e.target.value)}
         />
       );
     } else if (node.type === 'select' || node.type === 'relationSelect') {
@@ -76,7 +114,7 @@ export function FormRenderer({ spec, initialValues, errors, onSubmit }: FormRend
           className={inputClass}
           value={value == null ? '' : String(value)}
           disabled={node.disabled}
-          onChange={(e) => setValue(name, e.target.value)}
+          onChange={(e) => setValue(node, e.target.value)}
         >
           {Object.entries(node.options ?? {}).map(([val, label]) => (
             <option key={val} value={val}>
@@ -93,7 +131,7 @@ export function FormRenderer({ spec, initialValues, errors, onSubmit }: FormRend
           className="h-4 w-4 rounded border-input"
           checked={Boolean(value)}
           disabled={node.disabled}
-          onChange={(e) => setValue(name, e.target.checked)}
+          onChange={(e) => setValue(node, e.target.checked)}
         />
       );
     } else {
@@ -102,7 +140,7 @@ export function FormRenderer({ spec, initialValues, errors, onSubmit }: FormRend
           id={name}
           value={value == null ? '' : String(value)}
           disabled={node.disabled}
-          onChange={(e) => setValue(name, e.target.value)}
+          onChange={(e) => setValue(node, e.target.value)}
         />
       );
     }
@@ -122,7 +160,7 @@ export function FormRenderer({ spec, initialValues, errors, onSubmit }: FormRend
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
-      {spec.map(renderNode)}
+      {resolvedSpec.map(renderNode)}
       <div>
         <Button type="submit" disabled={submitting}>
           {submitting ? 'Saving...' : 'Save'}

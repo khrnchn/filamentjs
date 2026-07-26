@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
-import { getResourceForm, saveResource, type FormCell } from '~/server/resource-fns';
+import { getResourceForm, resolveForm, saveResource, type FormCell } from '~/server/resource-fns';
 import { FormRenderer } from '~/filament/form-renderer';
 import { useToast } from '~/components/toaster';
 
@@ -38,7 +38,18 @@ function NewRecord() {
           Back
         </Link>
       </div>
-      <FormRenderer spec={spec} initialValues={values} errors={errors} onSubmit={onSubmit} />
+      <FormRenderer
+        spec={spec}
+        initialValues={values}
+        errors={errors}
+        onSubmit={onSubmit}
+        onLiveChange={async (next) => {
+          const result = await resolveForm({
+            data: { slug: resource, values: next as Record<string, FormCell> },
+          });
+          return result.spec;
+        }}
+      />
     </div>
   );
 }

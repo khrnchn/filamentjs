@@ -13,8 +13,13 @@ export const postsResource = defineResource({
   form: (f) => [
     f.text('title').label('Title').required().maxLength(255),
     f.text('slug').label('Slug').required().maxLength(255),
-    f.textarea('body').label('Body'),
-    f.select('status').label('Status').options({ draft: 'Draft', published: 'Published' }).default('draft'),
+    f
+      .select('status')
+      .label('Status')
+      .options({ draft: 'Draft', published: 'Published' })
+      .default('draft')
+      .live(),
+    f.textarea('body').label('Body').visible((ctx) => ctx.get('status') === 'draft'),
     f.relationSelect('authorId').label('Author').relatedTo(user, { label: 'name' }),
     f.toggle('published').label('Published').default(false),
   ],

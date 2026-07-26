@@ -11,7 +11,7 @@ import {
   type FormFieldNode,
   type ResolvedNode,
 } from '@filamentjs/forms';
-import { authorizeResource, type PolicyAction } from '@filamentjs/panels';
+import { authorizeResource, type PolicyAction, type Resource } from '@filamentjs/panels';
 import { db } from '~/db/client';
 import { panel } from '~/filament/panel';
 import { currentSession } from './session';
@@ -92,6 +92,46 @@ async function authorize(slug: string, action: PolicyAction, id?: string) {
   return gate;
 }
 
+async function buildFormResponse(
+  resource: Resource,
+  record: Record<string, unknown> | undefined,
+  values: Record<string, FormCell>,
+): Promise<FormResponse> {
+  const schema = buildSchema(resource.form);
+  const spec = resolveSchema(schema, values, record);
+  const pending = schema.map((node, index) => ({
+    node: node as FormFieldNode,
+    resolved: spec[index]!,
+  }));
+
+  while (pending.length > 0) {
+    const { node, resolved } = pending.shift()!;
+    if (node.relation) {
+      const relatedModel = node.relation.model as PgTable;
+      const columns = getTableColumns(relatedModel) as Record<string, PgColumn>;
+      const valueColumn = columns[node.relation.valueColumn]!;
+      const labelColumn = columns[node.relation.labelColumn]!;
+      const rows = await db
+        .select({ value: valueColumn, label: labelColumn })
+        .from(relatedModel)
+        .orderBy(asc(labelColumn))
+        .limit(100);
+      resolved.options = Object.fromEntries(
+        rows.map((row) => [String(row.value), String(row.label)]),
+      );
+    }
+
+    node.children?.forEach((child, index) => {
+      pending.push({
+        node: child as FormFieldNode,
+        resolved: resolved.children![index]!,
+      });
+    });
+  }
+
+  return { title: resource.name, spec, values };
+}
+
 export const listResource = createServerFn({ method: 'GET' })
   .validator((input: { slug: string; params: TableParams }) => input)
   .handler(async ({ data }): Promise<ListResponse> => {
@@ -112,38 +152,14 @@ export const getResourceForm = createServerFn({ method: 'GET' })
     const { resource, record } = await authorize(data.slug, data.id ? 'update' : 'create', data.id);
     const schema = buildSchema(resource.form);
     const values = hydrate(schema, record) as Record<string, FormCell>;
-    const spec = resolveSchema(schema, values);
-    const pending = schema.map((node, index) => ({
-      node: node as FormFieldNode,
-      resolved: spec[index]!,
-    }));
+    return buildFormResponse(resource, record, values);
+  });
 
-    while (pending.length > 0) {
-      const { node, resolved } = pending.shift()!;
-      if (node.relation) {
-        const relatedModel = node.relation.model as PgTable;
-        const columns = getTableColumns(relatedModel) as Record<string, PgColumn>;
-        const valueColumn = columns[node.relation.valueColumn]!;
-        const labelColumn = columns[node.relation.labelColumn]!;
-        const rows = await db
-          .select({ value: valueColumn, label: labelColumn })
-          .from(relatedModel)
-          .orderBy(asc(labelColumn))
-          .limit(100);
-        resolved.options = Object.fromEntries(
-          rows.map((row) => [String(row.value), String(row.label)]),
-        );
-      }
-
-      node.children?.forEach((child, index) => {
-        pending.push({
-          node: child as FormFieldNode,
-          resolved: resolved.children![index]!,
-        });
-      });
-    }
-
-    return { title: resource.name, spec, values };
+export const resolveForm = createServerFn({ method: 'POST' })
+  .validator((input: { slug: string; id?: string; values: Record<string, FormCell> }) => input)
+  .handler(async ({ data }): Promise<FormResponse> => {
+    const { resource, record } = await authorize(data.slug, data.id ? 'update' : 'create', data.id);
+    return buildFormResponse(resource, record, data.values);
   });
 
 export const saveResource = createServerFn({ method: 'POST' })
