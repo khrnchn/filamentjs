@@ -11,6 +11,9 @@ export const t = {
   image: (name: string) => new ColumnBuilder('image', name),
   select: (name: string) => new FilterBuilder('select', name),
   ternary: (name: string) => new FilterBuilder('ternary', name),
+  // Names a handler declared on the resource. Placement decides whether it runs per row
+  // or over a selection: the same action works in `actions` or in `bulkActions`.
+  action: (name: string) => new ActionBuilder({ type: 'custom', name }),
   viewAction: () => new ActionBuilder({ type: 'view', name: 'view' }),
   editAction: () => new ActionBuilder({ type: 'edit', name: 'edit' }),
   deleteAction: () =>

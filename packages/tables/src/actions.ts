@@ -22,6 +22,11 @@ export class ActionBuilder {
     return this;
   }
 
+  destructive(): this {
+    this.node.destructive = true;
+    return this;
+  }
+
   build(): ActionNode {
     return this.node;
   }

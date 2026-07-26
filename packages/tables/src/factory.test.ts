@@ -48,4 +48,14 @@ describe('buildTable', () => {
     expect(custom.pageSizes).toEqual([5, 10]);
     expect(custom.emptyState).toEqual({ heading: 'No posts yet', description: 'Write one.' });
   });
+  it('builds a named custom action', () => {
+    const node = t.action('archive').label('Archive').icon('box').destructive().build();
+    expect(node).toEqual({
+      type: 'custom',
+      name: 'archive',
+      label: 'Archive',
+      icon: 'box',
+      destructive: true,
+    });
+  });
 });

@@ -66,4 +66,19 @@ describe('resolveTableSpec', () => {
     expect(spec.pageSizes).toEqual([5, 10]);
     expect(spec.emptyState).toEqual({ heading: 'Nothing here' });
   });
+  it('carries a custom action descriptor without any handler', () => {
+    const spec = resolveTableSpec(
+      buildTable({
+        columns: [t.text('title')],
+        actions: [t.action('archive').label('Archive').requiresConfirmation()],
+      }),
+    );
+    expect(spec.actions[0]).toEqual({
+      type: 'custom',
+      name: 'archive',
+      label: 'Archive',
+      requiresConfirmation: true,
+    });
+    expect(JSON.stringify(spec)).not.toContain('handler');
+  });
 });
