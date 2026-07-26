@@ -1,4 +1,5 @@
 import type { PanelInput, Panel, Resource, NavItem, NavGroup } from './types.js';
+import { defineWidget } from './widget.js';
 
 export function definePanel(input: PanelInput): Panel {
   const basePath = input.basePath ?? '/admin';
@@ -44,6 +45,7 @@ export function definePanel(input: PanelInput): Panel {
     basePath,
     brand,
     resources,
+    widgets: (input.widgets ?? []).map(defineWidget),
     nav,
     getResource(slug: string): Resource | undefined {
       return resources.find((r) => r.slug === slug);

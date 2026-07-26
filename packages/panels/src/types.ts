@@ -88,11 +88,37 @@ export interface Resource<Model = unknown> {
   can: ResourcePolicies<Model>;
 }
 
+export interface WidgetContext {
+  user: PolicyUser;
+}
+
+export interface StatWidget {
+  type: 'stat';
+  name: string;
+  title: string;
+  columnSpan?: number;
+  roles?: string[];
+  load(ctx: WidgetContext): Promise<{ value: string | number; description?: string; trend?: number[] }>;
+}
+
+export interface ChartWidget {
+  type: 'chart';
+  name: string;
+  title: string;
+  chart: 'line' | 'bar' | 'pie';
+  columnSpan?: number;
+  roles?: string[];
+  load(ctx: WidgetContext): Promise<{ labels: string[]; series: Array<{ name: string; data: number[] }> }>;
+}
+
+export type Widget = StatWidget | ChartWidget;
+
 export interface PanelInput {
   basePath?: string;
   brand?: string;
   resources: Resource[];
   navGroups?: string[];
+  widgets?: Widget[];
 }
 
 export interface NavItem {
@@ -112,6 +138,7 @@ export interface Panel {
   basePath: string;
   brand: string;
   resources: Resource[];
+  widgets: Widget[];
   nav: NavGroup[];
   getResource(slug: string): Resource | undefined;
 }
