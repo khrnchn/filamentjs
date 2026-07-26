@@ -30,6 +30,8 @@ function formFor<M extends AnyPgTable>(model: M) {
 
 **Effort:** Medium. Risk: Drizzle's column-type introspection generics can get gnarly; validate against drizzle-orm 0.45 first.
 
+**Shipped.** `defineResource` accepts `form: (f) => [...]` / `table: (t) => buildTable({...})` closures; the factories handed in are the runtime `f`/`t`, retyped so every single-string-arg factory takes only the model's column names. Column names come from a structural `M['_']['columns']` infer (no drizzle dependency in the packages); a non-Drizzle model falls back to `string`. Arrays/`TableConfig` values are still accepted. Compile-time coverage: `packages/panels/src/typed.type-test.ts` (run by `tsc --noEmit`, not vitest).
+
 ---
 
 ## 2. Relationship fields + relation columns
@@ -70,6 +72,10 @@ function formFor<M extends AnyPgTable>(model: M) {
 
 **Effort:** Low (roles already in; policies are additive closures checked in the same server fns).
 
+**Shipped (server side).** `defineResource({ can: { view, create, update, delete } })`, each `(ctx: { user, record? }) => boolean`, with `record` typed as the model's row. `authorizeResource(resource, action, ctx)` in `@filamentjs/panels` checks roles first, then the policy (missing policy = allowed). Every playground server fn goes through one gate that loads the record when an id is present, so `update`/`delete` are record-level and a missing row is reported before the mutation. Verified against the running app: an `editor` can create posts but gets `unauthorized` on delete (`can.delete` = admins only) and on the admin-only users resource.
+
+**Still open:** hiding denied actions in the UI. Row actions need a per-row policy evaluation plumbed into the list response; the server stays authoritative in the meantime.
+
 ---
 
 ## 5. Agent-friendly CLI (`@filamentjs/cli`)
@@ -96,17 +102,17 @@ Every command must be non-interactive by default (flags/env), print machine-read
 
 Fix opportunistically; most are edge cases not hit by current usage.
 
-| Sev | Where | Issue | Fix |
+| Sev | Where | Issue | Status |
 |---|---|---|---|
-| High | `core/path.ts setPath` | Prototype pollution via `__proto__`/`constructor`/`prototype` keys | Reject/skip those segment names |
-| Med | `core/path.ts getPath` | Reads inherited props (`toString`) | Use `Object.hasOwn` before descending |
-| Med | `forms/schema.ts dehydrate` | Hidden/invisible fields still emitted (contradicts spec lifecycle) | Skip nodes failing `isNodeVisible` during dehydrate |
-| Med | `forms/validation.ts` | `multiSelect().required()` accepts `[]` | Add `.min(1)` to required array fields |
-| Med | `core/state.ts` + `forms/schema.ts` | Object/array values stored/hydrated by reference (aliasing) | Clone on set/hydrate, or document the contract |
-| Med | `forms/schema.ts` | Dotted form field names read flat but ctx reads nested (`author.name`) | Reconcile once feature #2 introduces dotted names |
-| Low | `tables/resolve-spec.ts` | Structurally-typed action with a `handler` fn could leak into spec | Whitelist serializable action keys |
-| Low | `tables/resolve-value.ts humanizeLabel` | `HTTPStatus` / trailing-dot edge cases | Acceptable; revisit if noisy |
-| Low | builders (all) | `build()` returns the live mutable node | Return a shallow copy from `build()` |
+| High | `core/path.ts setPath` | Prototype pollution via `__proto__`/`constructor`/`prototype` keys | **Fixed**, such paths are refused |
+| Med | `core/path.ts getPath` | Reads inherited props (`toString`) | **Fixed**, `Object.hasOwn` before descending |
+| Med | `forms/schema.ts dehydrate` | Hidden/invisible fields still emitted (contradicts spec lifecycle) | **Fixed**, dehydrate walks with a ctx and skips hidden nodes and their children |
+| Med | `forms/validation.ts` | `multiSelect().required()` accepts `[]` | **Fixed**, required array fields get `.min(1)` |
+| Med | `core/state.ts` + `forms/schema.ts` | Object/array values stored/hydrated by reference (aliasing) | **Fixed**, `hydrate` clones object values (`createStore` already cloned) |
+| Med | `forms/schema.ts` | Dotted form field names read flat but ctx reads nested (`author.name`) | Open, reconcile once feature #2 introduces dotted names |
+| Low | `tables/resolve-spec.ts` | Structurally-typed action with a `handler` fn could leak into spec | **Fixed**, actions rebuilt from whitelisted keys |
+| Low | `tables/resolve-value.ts humanizeLabel` | `HTTPStatus` / trailing-dot edge cases | Open, acceptable; revisit if noisy |
+| Low | builders (all) | `build()` returns the live mutable node | **Fixed**, `build()` returns a shallow copy |
 
 Note: `false`/`0`/`''`/`null` are handled correctly through hydrate/dehydrate and validation; those were verified clean.
 
@@ -115,8 +121,9 @@ Note: `false`/`0`/`''`/`null` are handled correctly through hydrate/dehydrate an
 ## Sequencing
 
 ```
-v1 panel (in progress) ──► #1 typed binding ──► #4 policies ──► #2 relationships ──► #3 UX polish
+v1 panel ──► #1 typed binding ──► #4 policies ──► #2 relationships ──► #3 UX polish
+   done            done              done             next
                                     │
-                        hardening backlog folded in opportunistically
+                        hardening backlog folded in opportunistically (all but 2 items done)
 ```
 Each feature ships as its own spec-derived plan, built and tested the same way as the v1 packages.
