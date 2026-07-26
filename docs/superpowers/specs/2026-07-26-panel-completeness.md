@@ -548,6 +548,21 @@ column can show a total, all reflected in the URL.
 
 ---
 
+## Status
+
+All eight features are built and verified against the running app. What was deliberately left
+undone, or discovered along the way:
+
+- 7d (tags input, key value, colour picker, native date pickers) was scoped out of 7c and remains open.
+- Grouping, relation sorting and filtering, searchable relation selects and queue-backed import
+  and export remain out of scope, as recorded below.
+- `t.bulkAction` was dropped as redundant; see the note under feature 4.
+- Two typed-binding interactions surfaced during the build and were fixed by exempting the factory
+  from column narrowing: `t.action` takes a handler name, and a repeater's row fields are keys
+  inside the stored row rather than model columns.
+- Adding the view page briefly made the edit route unreachable, because `$resource_.$id.tsx`
+  became the parent of `$resource_.$id.edit.tsx`. The view route is now an index leaf.
+
 ## Sequencing
 
 ```

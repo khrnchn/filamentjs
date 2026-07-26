@@ -65,7 +65,8 @@ This is a pnpm monorepo.
 | `@filamentjs/core` | Schema-node tree, `prop \| (ctx) => prop` resolution, flat state store, fluent builder base |
 | `@filamentjs/forms` | Field and layout builders, hydrate/dehydrate, Zod validation compiler, serializable form spec |
 | `@filamentjs/tables` | Column/filter/action builders, column-state resolution, serializable table spec, `TableParams` contract |
-| `@filamentjs/panels` | `defineResource` / `definePanel`, navigation model |
+| `@filamentjs/infolists` | Read-only entry builders and `resolveInfolist`, the counterpart to forms |
+| `@filamentjs/panels` | `defineResource` / `definePanel`, navigation, policies, actions, widgets, relation managers |
 | `apps/playground` | A TanStack Start app that dogfoods everything: Postgres, better-auth, a Posts and a Users resource |
 
 The pure packages have no React, no DB, and no framework code. They have 130 unit tests. The playground has 24 DB-backed integration tests against a real Postgres.
