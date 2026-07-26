@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { SchemaNode } from '@filamentjs/core';
+import { setPath, type SchemaNode } from '@filamentjs/core';
 import { collectFields } from './schema.js';
 import type { FormFieldNode } from './types.js';
 
@@ -31,9 +31,28 @@ export function compileField(field: FormFieldNode): z.ZodTypeAny {
 }
 
 export function compileValidation(nodes: SchemaNode[]): z.ZodObject<Record<string, z.ZodTypeAny>> {
-  const shape: Record<string, z.ZodTypeAny> = {};
+  const fields: Record<string, unknown> = {};
   for (const field of collectFields(nodes)) {
-    shape[field.name] = compileField(field);
+    setPath(fields, field.name, compileField(field));
   }
-  return z.object(shape);
+
+  const compileObject = (
+    values: Record<string, unknown>,
+  ): Record<string, z.ZodTypeAny> =>
+    Object.fromEntries(
+      Object.entries(values).map(([name, value]) => {
+        if (value instanceof z.ZodType) return [name, value];
+
+        const shape = compileObject(value as Record<string, unknown>);
+        const object = z.object(shape);
+        return [
+          name,
+          Object.values(shape).every((schema) => schema.isOptional())
+            ? object.optional()
+            : object,
+        ];
+      }),
+    );
+
+  return z.object(compileObject(fields));
 }

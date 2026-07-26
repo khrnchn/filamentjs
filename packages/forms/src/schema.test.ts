@@ -28,6 +28,12 @@ describe('hydrate', () => {
     const state = hydrate(buildSchema(builders), { name: 'Ada' });
     expect(state).toEqual({ name: 'Ada', active: false });
   });
+  it('hydrates a dotted field from a nested record into nested state', () => {
+    const state = hydrate(buildSchema([f.text('meta.author')]), {
+      meta: { author: 'Ada' },
+    });
+    expect(state).toEqual({ meta: { author: 'Ada' } });
+  });
   it('does not alias object values from the record', () => {
     const record = { tags: ['a'] };
     const state = hydrate(buildSchema([f.multiSelect('tags')]), record);
@@ -44,9 +50,23 @@ describe('dehydrate', () => {
     const payload = dehydrate(buildSchema(builders), { name: 'Ada', active: true });
     expect(payload).toEqual({ name: 'Ada', active: true });
   });
+  it('dehydrates a dotted field into a nested payload', () => {
+    const payload = dehydrate(buildSchema([f.text('meta.author')]), {
+      meta: { author: 'Ada' },
+    });
+    expect(payload).toEqual({ meta: { author: 'Ada' } });
+  });
+  it('preserves flat field hydration and dehydration', () => {
+    const nodes = buildSchema([f.text('name')]);
+    expect(dehydrate(nodes, hydrate(nodes, { name: 'Ada' }))).toEqual({ name: 'Ada' });
+  });
   it('skips fields hidden by their own visible prop', () => {
     const nodes = buildSchema([f.text('name'), f.text('secret').visible(false)]);
     expect(dehydrate(nodes, { name: 'Ada', secret: 'shh' })).toEqual({ name: 'Ada' });
+  });
+  it('skips a hidden dotted field from the nested payload', () => {
+    const nodes = buildSchema([f.text('meta.secret').visible(false)]);
+    expect(dehydrate(nodes, { meta: { secret: 'shh' } })).toEqual({});
   });
   it('skips fields inside a hidden layout', () => {
     const nodes = buildSchema([f.section('Meta', [f.text('secret')]).visible(false)]);

@@ -1,4 +1,4 @@
-import { createCtx, createStore, getPath, isNodeVisible } from '@filamentjs/core';
+import { createCtx, createStore, getPath, isNodeVisible, setPath } from '@filamentjs/core';
 import type { SchemaNode } from '@filamentjs/core';
 import type { AnyBuilder } from './layout.js';
 import type { FormFieldNode } from './types.js';
@@ -30,7 +30,11 @@ export function hydrate(
     const value = fromRecord !== undefined ? fromRecord : field.default;
     // clone objects/arrays so form state never aliases the record or the field default
     if (value !== undefined) {
-      state[field.name] = typeof value === 'object' && value !== null ? structuredClone(value) : value;
+      setPath(
+        state,
+        field.name,
+        typeof value === 'object' && value !== null ? structuredClone(value) : value,
+      );
     }
   }
   return state;
@@ -49,8 +53,8 @@ export function dehydrate(
     for (const node of list) {
       if (!isNodeVisible(node, ctx)) continue;
       if (isField(node)) {
-        const value = values[node.name];
-        if (value !== undefined) payload[node.name] = value;
+        const value = getPath(values, node.name);
+        if (value !== undefined) setPath(payload, node.name, value);
       }
       if (node.children) walk(node.children);
     }

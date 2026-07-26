@@ -23,6 +23,22 @@ describe('compileValidation', () => {
     expect(schema.safeParse({ name: 'abcd' }).success).toBe(false);
     expect(schema.safeParse({ name: 'abc' }).success).toBe(true);
   });
+  it('validates dotted fields through a nested object with nested error paths', () => {
+    const schema = compileValidation(
+      buildSchema([f.text('meta.author').required().minLength(3)]),
+    );
+    expect(schema.safeParse({ meta: { author: 'Ada' } }).success).toBe(true);
+
+    const result = schema.safeParse({ meta: { author: 'Al' } });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(['meta', 'author']);
+    }
+  });
+  it('allows an omitted optional dotted field', () => {
+    const schema = compileValidation(buildSchema([f.text('meta.author')]));
+    expect(schema.safeParse({}).success).toBe(true);
+  });
   it('types toggles as boolean', () => {
     const schema = compileValidation(buildSchema([f.toggle('active').required()]));
     expect(schema.safeParse({ active: 'yes' }).success).toBe(false);
