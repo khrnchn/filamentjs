@@ -74,6 +74,32 @@ describe('resolveQuery against real Postgres', () => {
     expect(res.total).toBe(2);
   });
 
+  it('narrows results with a per-column search', async () => {
+    const res = await resolveQuery(posts, config, { ...base, columnSearches: { title: 'alpha' } });
+    expect(res.total).toBe(1);
+    expect((res.rows as Array<{ title: string }>)[0]!.title).toBe('Alpha guide');
+  });
+
+  it('ands per-column searches together with the global search', async () => {
+    const res = await resolveQuery(posts, config, {
+      ...base,
+      search: 'guide',
+      columnSearches: { title: 'beta' },
+    });
+    expect(res.total).toBe(1);
+    expect((res.rows as Array<{ title: string }>)[0]!.title).toBe('Beta guide');
+  });
+
+  it('ignores a per-column search on an unknown or non-searchable column', async () => {
+    const unknown = await resolveQuery(posts, config, { ...base, columnSearches: { nope: 'x' } });
+    expect(unknown.total).toBe(4);
+    const notSearchable = await resolveQuery(posts, config, {
+      ...base,
+      columnSearches: { status: 'draft' },
+    });
+    expect(notSearchable.total).toBe(4);
+  });
+
   it('sorts and paginates', async () => {
     const res = await resolveQuery(posts, config, {
       ...base,
@@ -127,6 +153,14 @@ describe('resolveQuery with dot-path relation columns', () => {
     const res = await resolveQuery(posts, relationConfig, { ...base, search: 'Ada' });
     expect(res.total).toBe(0);
     expect(res.rows).toHaveLength(0);
+  });
+
+  it('ignores a per-column search on a relation column', async () => {
+    const res = await resolveQuery(posts, relationConfig, {
+      ...base,
+      columnSearches: { 'author.name': 'Ada' },
+    });
+    expect(res.total).toBe(4);
   });
 
   it('ignores a sort on a relation column', async () => {

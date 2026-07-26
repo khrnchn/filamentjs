@@ -24,6 +24,15 @@ export async function resolveQuery(
     if (searchConds.length) conditions.push(or(...searchConds)!);
   }
 
+  // Per-column searches AND together, and with the global search. Only columns that
+  // exist on this table and opted into searching qualify, which also skips dot paths.
+  for (const [name, term] of Object.entries(params.columnSearches ?? {})) {
+    if (!term) continue;
+    const column = config.columns.find((c) => c.name === name);
+    if (!column?.searchable || !columns[name]) continue;
+    conditions.push(ilike(columns[name]!, `%${term}%`));
+  }
+
   for (const filter of config.filters) {
     const value = params.filters?.[filter.name];
     if (value === undefined || value === null || value === '') continue;
