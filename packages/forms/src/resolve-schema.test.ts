@@ -84,4 +84,9 @@ describe('resolveSchema', () => {
     expect(spec!.rows![0]![1]!.visible).toBe(true);
     expect(spec!.rows![1]![1]!.visible).toBe(false);
   });
+  it('carries file upload constraints into the spec', () => {
+    const nodes = buildSchema([f.fileUpload('cover').accept(['image/png']).maxSize(1000)]);
+    const [spec] = resolveSchema(nodes, {});
+    expect(spec).toMatchObject({ type: 'fileUpload', accept: ['image/png'], maxSize: 1000 });
+  });
 });

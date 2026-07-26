@@ -7,3 +7,6 @@ dist
 
 # playground generated
 apps/playground/src/routeTree.gen.ts
+
+# uploaded files are runtime data, not source
+apps/playground/uploads

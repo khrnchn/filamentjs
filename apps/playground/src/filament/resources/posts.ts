@@ -31,6 +31,11 @@ export const postsResource = defineResource({
       .label('Links')
       .maxItems(5)
       .itemLabel('label'),
+    f
+      .fileUpload('cover')
+      .label('Cover image')
+      .accept(['image/png', 'image/jpeg', 'image/webp'])
+      .maxSize(2_000_000),
     f.toggle('published').label('Published').default(false),
   ],
   infolist: (i) => [

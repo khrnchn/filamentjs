@@ -27,6 +27,8 @@ export function FormRenderer({
   const [resolvedSpec, setResolvedSpec] = useState(spec);
   const [values, setValues] = useState<Record<string, unknown>>(initialValues);
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const valuesRef = useRef(values);
   const liveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const liveSequence = useRef(0);
@@ -181,6 +183,60 @@ export function FormRenderer({
             </option>
           ))}
         </select>
+      );
+    } else if (node.type === 'fileUpload') {
+      const stored = value == null ? '' : String(value);
+      control = (
+        <div className="flex flex-col gap-2">
+          {stored ? (
+            <div className="flex items-center gap-3">
+              <img
+                src={`/api/uploads/${stored}`}
+                alt=""
+                className="h-16 w-16 rounded border object-cover"
+              />
+              <button
+                type="button"
+                onClick={() => setValue(node, null)}
+                className="text-sm text-destructive hover:underline"
+              >
+                Remove
+              </button>
+            </div>
+          ) : null}
+          <input
+            id={name}
+            type="file"
+            accept={node.accept?.join(',')}
+            disabled={node.disabled || uploading === name}
+            className="text-sm"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              if (node.maxSize !== undefined && file.size > node.maxSize) {
+                setUploadError(`That file is larger than ${Math.round(node.maxSize / 1000)} kB`);
+                return;
+              }
+              setUploadError(null);
+              setUploading(name);
+              try {
+                const body = new FormData();
+                body.append('file', file);
+                const res = await fetch('/api/uploads/', { method: 'POST', body });
+                if (!res.ok) {
+                  setUploadError('Upload failed');
+                  return;
+                }
+                const stored = (await res.json()) as { path: string };
+                setValue(node, stored.path);
+              } finally {
+                setUploading(null);
+              }
+            }}
+          />
+          {uploading === name ? <span className="text-xs text-muted-foreground">Uploading...</span> : null}
+          {uploadError ? <p className="text-sm text-destructive">{uploadError}</p> : null}
+        </div>
       );
     } else if (node.type === 'toggle' || node.type === 'checkbox') {
       control = (

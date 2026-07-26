@@ -76,4 +76,9 @@ describe('compileValidation', () => {
     expect(schema.safeParse({ links: [{ label: 'a' }] }).success).toBe(true);
     expect(schema.safeParse({ links: [{ label: 'a' }, { label: 'b' }] }).success).toBe(false);
   });
+  it('validates a file upload as a path string', () => {
+    const schema = compileValidation(buildSchema([f.fileUpload('cover').required()]));
+    expect(schema.safeParse({ cover: 'uploads/a.png' }).success).toBe(true);
+    expect(schema.safeParse({ cover: '' }).success).toBe(false);
+  });
 });

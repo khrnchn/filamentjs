@@ -27,6 +27,8 @@ export interface FormFieldNode extends FieldNode {
   };
   minItems?: number;
   maxItems?: number;
+  accept?: string[];
+  maxSize?: number;
   itemLabel?: string;
   live?: boolean;
 }

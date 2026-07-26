@@ -47,4 +47,19 @@ describe('f factory: layout', () => {
     const node = f.section('Outer', [f.grid(2, [f.text('a')])]).build();
     expect(node.children?.[0]).toMatchObject({ type: 'grid', columns: 2 });
   });
+  it('creates a file upload carrying its constraints', () => {
+    const node = f
+      .fileUpload('cover')
+      .label('Cover')
+      .accept(['image/png', 'image/jpeg'])
+      .maxSize(5_000_000)
+      .build();
+    expect(node).toMatchObject({
+      type: 'fileUpload',
+      name: 'cover',
+      label: 'Cover',
+      accept: ['image/png', 'image/jpeg'],
+      maxSize: 5_000_000,
+    });
+  });
 });

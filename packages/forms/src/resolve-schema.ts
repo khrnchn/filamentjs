@@ -21,6 +21,9 @@ export interface ResolvedNode {
   minItems?: number;
   maxItems?: number;
   itemLabel?: string;
+  // fileUpload only
+  accept?: string[];
+  maxSize?: number;
 }
 
 function resolveNode(node: SchemaNode, ctx: Ctx, values: Record<string, unknown>): ResolvedNode {
@@ -37,6 +40,8 @@ function resolveNode(node: SchemaNode, ctx: Ctx, values: Record<string, unknown>
     resolved.name = field.name;
     resolved.rules = field.rules;
     if (field.options) resolved.options = field.options;
+    if (field.accept) resolved.accept = field.accept;
+    if (field.maxSize !== undefined) resolved.maxSize = field.maxSize;
     if (field.live) resolved.live = true;
     const placeholder = resolveProp(field.placeholder, ctx, undefined as unknown as string);
     if (placeholder !== undefined) resolved.placeholder = placeholder;

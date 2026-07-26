@@ -72,6 +72,20 @@ export class SelectFieldBuilder extends FieldBuilder {
   }
 }
 
+// Stores the uploaded file's path, never its bytes: the upload itself is a separate
+// request, and only the resulting path lands in form state.
+export class FileUploadFieldBuilder extends FieldBuilder {
+  accept(types: string[]): this {
+    this.node.accept = types;
+    return this;
+  }
+
+  maxSize(bytes: number): this {
+    this.node.maxSize = bytes;
+    return this;
+  }
+}
+
 export class RelationSelectFieldBuilder extends SelectFieldBuilder {
   relatedTo(model: unknown, opts: { label: string; value?: string }): this {
     this.node.relation = {

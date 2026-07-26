@@ -1,5 +1,6 @@
 import {
   FieldBuilder,
+  FileUploadFieldBuilder,
   RelationSelectFieldBuilder,
   RepeaterFieldBuilder,
   SelectFieldBuilder,
@@ -21,6 +22,7 @@ const rowFields = {
   toggle: (name: string) => new FieldBuilder('toggle', name),
   datePicker: (name: string) => new FieldBuilder('datePicker', name),
   dateTimePicker: (name: string) => new FieldBuilder('dateTimePicker', name),
+  fileUpload: (name: string) => new FileUploadFieldBuilder('fileUpload', name),
 };
 
 export type RowFields = typeof rowFields;
