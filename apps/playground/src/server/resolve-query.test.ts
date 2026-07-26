@@ -130,6 +130,32 @@ describe('resolveQuery against real Postgres', () => {
   });
 });
 
+describe('resolveQuery summaries', () => {
+  const summaryConfig = buildTable({
+    columns: [t.text('title').searchable(), t.text('status').summarize('count')],
+    filters: [t.select('status').options({ draft: 'Draft', published: 'Published' })],
+  });
+
+  it('aggregates over the whole filtered set, not just the page', async () => {
+    const res = await resolveQuery(posts, summaryConfig, { ...base, pageSize: 1 });
+    expect(res.rows).toHaveLength(1);
+    expect(res.summaries).toEqual({ status: 4 });
+  });
+
+  it('respects the active filters', async () => {
+    const res = await resolveQuery(posts, summaryConfig, {
+      ...base,
+      filters: { status: 'draft' },
+    });
+    expect(res.summaries).toEqual({ status: 2 });
+  });
+
+  it('omits summaries when no column asks for one', async () => {
+    const res = await resolveQuery(posts, config, { ...base });
+    expect(res.summaries).toBeUndefined();
+  });
+});
+
 describe('resolveQuery with dot-path relation columns', () => {
   it('loads the related record for a dot-path column', async () => {
     const res = await resolveQuery(posts, relationConfig, {

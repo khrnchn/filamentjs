@@ -1,4 +1,19 @@
-import { and, or, asc, desc, count, ilike, eq, inArray, isNull, getTableColumns } from 'drizzle-orm';
+import {
+  and,
+  or,
+  asc,
+  desc,
+  avg,
+  count,
+  max,
+  min,
+  sum,
+  ilike,
+  eq,
+  inArray,
+  isNull,
+  getTableColumns,
+} from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import type { PgTable, PgColumn } from 'drizzle-orm/pg-core';
 import type { Row, TableConfig, TableParams, TableResult } from '@filamentjs/tables';
@@ -53,6 +68,26 @@ export async function resolveQuery(
   const totalRows = await db.select({ total: count() }).from(table).where(where);
   const total = Number(totalRows[0]?.total ?? 0);
 
+  // Summaries scope to the whole filtered set, so they run against `where` without
+  // the page limit. One extra round trip, only when a column asks for an aggregate.
+  const summarized = config.columns.filter((c) => c.summarize && columns[c.name]);
+  let summaries: Record<string, number> | undefined;
+  if (summarized.length) {
+    const selection: Record<string, SQL<unknown>> = {};
+    for (const col of summarized) {
+      const column = columns[col.name]!;
+      if (col.summarize === 'sum') selection[col.name] = sum(column).mapWith(Number);
+      else if (col.summarize === 'avg') selection[col.name] = avg(column).mapWith(Number);
+      else if (col.summarize === 'min') selection[col.name] = min(column).mapWith(Number);
+      else if (col.summarize === 'max') selection[col.name] = max(column).mapWith(Number);
+      else selection[col.name] = count(column).mapWith(Number);
+    }
+    const [row] = await db.select(selection).from(table).where(where);
+    summaries = Object.fromEntries(
+      summarized.map((col) => [col.name, Number((row as Record<string, unknown>)?.[col.name] ?? 0)]),
+    );
+  }
+
   const sortCol = params.sort ? columns[params.sort] : undefined;
   const orderBy = sortCol ? (params.dir === 'desc' ? desc(sortCol) : asc(sortCol)) : undefined;
 
@@ -84,12 +119,12 @@ export async function resolveQuery(
       limit: params.pageSize,
       offset,
     });
-    return { rows, total };
+    return summaries ? { rows, total, summaries } : { rows, total };
   }
 
   const query = db.select().from(table).where(where).$dynamic();
   if (orderBy) query.orderBy(orderBy);
   const rows = await query.limit(params.pageSize).offset(offset);
 
-  return { rows, total };
+  return summaries ? { rows, total, summaries } : { rows, total };
 }

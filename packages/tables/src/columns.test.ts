@@ -20,4 +20,16 @@ describe('BadgeColumnBuilder', () => {
     const node = new BadgeColumnBuilder('badge', 'role').colors({ admin: 'red' }).build();
     expect(node.colors).toEqual({ admin: 'red' });
   });
+  it('marks a column toggleable, optionally hidden by default', () => {
+    expect(new ColumnBuilder('text', 'slug').toggleable().build()).toMatchObject({
+      toggleable: true,
+      hiddenByDefault: false,
+    });
+    expect(
+      new ColumnBuilder('text', 'slug').toggleable({ hiddenByDefault: true }).build(),
+    ).toMatchObject({ toggleable: true, hiddenByDefault: true });
+  });
+  it('attaches an aggregate to a column', () => {
+    expect(new ColumnBuilder('text', 'views').summarize('sum').build().summarize).toBe('sum');
+  });
 });

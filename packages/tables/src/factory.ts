@@ -1,7 +1,7 @@
 import { BadgeColumnBuilder, ColumnBuilder } from './columns.js';
 import { FilterBuilder } from './filters.js';
 import { ActionBuilder } from './actions.js';
-import type { TableConfig } from './types.js';
+import type { EmptyState, TableConfig } from './types.js';
 
 export const t = {
   text: (name: string) => new ColumnBuilder('text', name),
@@ -25,14 +25,19 @@ export interface TableConfigInput {
   actions?: ActionBuilder[];
   bulkActions?: ActionBuilder[];
   headerActions?: ActionBuilder[];
+  pageSizes?: number[];
+  emptyState?: EmptyState;
 }
 
 export function buildTable(input: TableConfigInput): TableConfig {
-  return {
+  const config: TableConfig = {
     columns: input.columns.map((c) => c.build()),
     filters: (input.filters ?? []).map((f) => f.build()),
     actions: (input.actions ?? []).map((a) => a.build()),
     bulkActions: (input.bulkActions ?? []).map((a) => a.build()),
     headerActions: (input.headerActions ?? []).map((a) => a.build()),
+    pageSizes: input.pageSizes ?? [10, 25, 50, 100],
   };
+  if (input.emptyState) config.emptyState = input.emptyState;
+  return config;
 }

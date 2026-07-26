@@ -1,5 +1,5 @@
 import { humanizeLabel } from './resolve-value.js';
-import type { ActionNode, ColumnNode, FilterNode, TableConfig } from './types.js';
+import type { ActionNode, Aggregate, ColumnNode, EmptyState, FilterNode, TableConfig } from './types.js';
 
 export interface ColumnSpec {
   type: string;
@@ -7,6 +7,9 @@ export interface ColumnSpec {
   label: string;
   sortable: boolean;
   searchable: boolean;
+  toggleable?: boolean;
+  hiddenByDefault?: boolean;
+  summarize?: Aggregate;
   colors?: Record<string, string>;
 }
 
@@ -24,6 +27,8 @@ export interface TableSpec {
   actions: ActionNode[];
   bulkActions: ActionNode[];
   headerActions: ActionNode[];
+  pageSizes: number[];
+  emptyState?: EmptyState;
 }
 
 function columnSpec(col: ColumnNode): ColumnSpec {
@@ -34,6 +39,11 @@ function columnSpec(col: ColumnNode): ColumnSpec {
     sortable: col.sortable ?? false,
     searchable: col.searchable ?? false,
   };
+  if (col.toggleable) {
+    spec.toggleable = true;
+    spec.hiddenByDefault = col.hiddenByDefault ?? false;
+  }
+  if (col.summarize) spec.summarize = col.summarize;
   if (col.colors) spec.colors = col.colors;
   return spec;
 }
@@ -61,11 +71,14 @@ function actionSpec(action: ActionNode): ActionNode {
 }
 
 export function resolveTableSpec(config: TableConfig): TableSpec {
-  return {
+  const spec: TableSpec = {
     columns: config.columns.map(columnSpec),
     filters: config.filters.map(filterSpec),
     actions: config.actions.map(actionSpec),
     bulkActions: config.bulkActions.map(actionSpec),
     headerActions: config.headerActions.map(actionSpec),
+    pageSizes: config.pageSizes,
   };
+  if (config.emptyState) spec.emptyState = config.emptyState;
+  return spec;
 }

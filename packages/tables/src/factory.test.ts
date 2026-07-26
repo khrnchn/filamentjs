@@ -35,4 +35,17 @@ describe('buildTable', () => {
   it('builds a view action', () => {
     expect(t.viewAction().build()).toEqual({ type: 'view', name: 'view' });
   });
+  it('defaults page sizes and carries an empty state', () => {
+    const config = buildTable({ columns: [t.text('title')] });
+    expect(config.pageSizes).toEqual([10, 25, 50, 100]);
+    expect(config.emptyState).toBeUndefined();
+
+    const custom = buildTable({
+      columns: [t.text('title')],
+      pageSizes: [5, 10],
+      emptyState: { heading: 'No posts yet', description: 'Write one.' },
+    });
+    expect(custom.pageSizes).toEqual([5, 10]);
+    expect(custom.emptyState).toEqual({ heading: 'No posts yet', description: 'Write one.' });
+  });
 });

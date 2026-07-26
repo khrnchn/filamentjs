@@ -2,14 +2,25 @@ export type Row = Record<string, unknown>;
 
 export type ColumnType = 'text' | 'badge' | 'boolean' | 'icon' | 'image';
 
+export type Aggregate = 'sum' | 'avg' | 'count' | 'min' | 'max';
+
 export interface ColumnNode {
   type: ColumnType;
   name: string;
   label?: string;
   sortable?: boolean;
   searchable?: boolean;
+  toggleable?: boolean;
+  hiddenByDefault?: boolean;
+  summarize?: Aggregate;
   accessor?: (row: Row) => unknown;
   colors?: Record<string, string>;
+}
+
+export interface EmptyState {
+  heading: string;
+  description?: string;
+  icon?: string;
 }
 
 export type FilterType = 'select' | 'ternary';
@@ -39,6 +50,8 @@ export interface TableConfig {
   actions: ActionNode[];
   bulkActions: ActionNode[];
   headerActions: ActionNode[];
+  pageSizes: number[];
+  emptyState?: EmptyState;
 }
 
 export interface TableParams {
@@ -54,4 +67,6 @@ export interface TableParams {
 export interface TableResult<R = Row> {
   rows: R[];
   total: number;
+  // aggregates over the whole filtered set, keyed by column name, not just this page
+  summaries?: Record<string, number>;
 }

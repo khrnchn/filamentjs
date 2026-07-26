@@ -47,4 +47,23 @@ describe('resolveTableSpec', () => {
     expect(spec.actions[0]).toEqual({ type: 'custom', name: 'archive', label: 'Archive' });
     expect(() => JSON.stringify(spec)).not.toThrow();
   });
+  it('carries toggling, summaries, page sizes and the empty state into the spec', () => {
+    const spec = resolveTableSpec(
+      buildTable({
+        columns: [
+          t.text('title'),
+          t.text('slug').toggleable({ hiddenByDefault: true }),
+          t.text('views').summarize('sum'),
+        ],
+        pageSizes: [5, 10],
+        emptyState: { heading: 'Nothing here' },
+      }),
+    );
+    expect(spec.columns[0]).toMatchObject({ name: 'title' });
+    expect(spec.columns[0]!.toggleable).toBeUndefined();
+    expect(spec.columns[1]).toMatchObject({ toggleable: true, hiddenByDefault: true });
+    expect(spec.columns[2]).toMatchObject({ summarize: 'sum' });
+    expect(spec.pageSizes).toEqual([5, 10]);
+    expect(spec.emptyState).toEqual({ heading: 'Nothing here' });
+  });
 });

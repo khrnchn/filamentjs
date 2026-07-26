@@ -1,4 +1,4 @@
-import type { ColumnNode, ColumnType, Row } from './types.js';
+import type { Aggregate, ColumnNode, ColumnType, Row } from './types.js';
 
 export class ColumnBuilder {
   protected node: ColumnNode;
@@ -19,6 +19,17 @@ export class ColumnBuilder {
 
   searchable(): this {
     this.node.searchable = true;
+    return this;
+  }
+
+  toggleable(opts: { hiddenByDefault?: boolean } = {}): this {
+    this.node.toggleable = true;
+    this.node.hiddenByDefault = opts.hiddenByDefault ?? false;
+    return this;
+  }
+
+  summarize(aggregate: Aggregate): this {
+    this.node.summarize = aggregate;
     return this;
   }
 
