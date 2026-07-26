@@ -199,7 +199,8 @@ export const saveResource = createServerFn({ method: 'POST' })
     if (!result.success) {
       const errors: Record<string, string> = {};
       result.error.issues.forEach((i) => {
-        errors[String(i.path[0])] = i.message;
+        // nested names validate through nested objects, so the whole path is the field key
+        errors[i.path.join('.')] = i.message;
       });
       return { ok: false, errors };
     }
