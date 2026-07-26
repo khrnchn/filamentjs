@@ -32,4 +32,7 @@ describe('buildTable', () => {
     expect(config.bulkActions).toEqual([]);
     expect(config.headerActions).toEqual([]);
   });
+  it('builds a view action', () => {
+    expect(t.viewAction().build()).toEqual({ type: 'view', name: 'view' });
+  });
 });

@@ -1,5 +1,6 @@
 import type { AnyBuilder, f } from '@filamentjs/forms';
 import type { TableConfig, t } from '@filamentjs/tables';
+import type { i } from '@filamentjs/infolists';
 
 // Drizzle tables carry their columns at `_['columns']`; anything else stays unconstrained.
 type ColumnNames<M> = M extends { _: { columns: infer C } } ? Extract<keyof C, string> : string;
@@ -23,6 +24,7 @@ type Names<Model, Relations> = ColumnNames<Model> | RelationPaths<Relations>;
 
 export type Fields<Model, Relations = unknown> = ScopedNames<typeof f, Names<Model, Relations>>;
 export type Columns<Model, Relations = unknown> = ScopedNames<typeof t, Names<Model, Relations>>;
+export type Entries<Model, Relations = unknown> = ScopedNames<typeof i, Names<Model, Relations>>;
 
 // Drizzle tables expose their row type at `$inferSelect`; a plain model is its own row type.
 type RowOf<M> = M extends { $inferSelect: infer R } ? R : M;
@@ -65,6 +67,8 @@ export interface ResourceInput<Model = unknown, Relations = unknown> {
   relations?: Relations;
   form: AnyBuilder[] | ((f: Fields<Model, Relations>) => AnyBuilder[]);
   table: TableConfig | ((t: Columns<Model, Relations>) => TableConfig);
+  // omit to let the view page fall back to the form fields rendered read-only
+  infolist?: AnyBuilder[] | ((i: Entries<Model, Relations>) => AnyBuilder[]);
   nav?: NavMeta;
   roles?: string[];
   can?: ResourcePolicies<Model>;
@@ -78,6 +82,7 @@ export interface Resource<Model = unknown> {
   relations: Record<string, unknown>;
   form: AnyBuilder[];
   table: TableConfig;
+  infolist: AnyBuilder[];
   nav: NavMeta;
   roles: string[];
   can: ResourcePolicies<Model>;

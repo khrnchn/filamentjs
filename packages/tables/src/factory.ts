@@ -11,6 +11,7 @@ export const t = {
   image: (name: string) => new ColumnBuilder('image', name),
   select: (name: string) => new FilterBuilder('select', name),
   ternary: (name: string) => new FilterBuilder('ternary', name),
+  viewAction: () => new ActionBuilder({ type: 'view', name: 'view' }),
   editAction: () => new ActionBuilder({ type: 'edit', name: 'edit' }),
   deleteAction: () =>
     new ActionBuilder({ type: 'delete', name: 'delete', requiresConfirmation: true, destructive: true }),

@@ -28,6 +28,12 @@ describe('defineResource', () => {
     expect(defineResource(base).relations).toEqual({});
     expect(defineResource({ ...base, relations: { author: related } }).relations).toEqual({ author: related });
   });
+  it('defaults the infolist to an empty list and resolves an infolist closure', () => {
+    const base = { name: 'Post', slug: 'posts', model: {}, form: [], table };
+    expect(defineResource(base).infolist).toEqual([]);
+    const r = defineResource({ ...base, infolist: (ii) => [ii.text('title').label('Title')] });
+    expect(r.infolist[0]!.build()).toMatchObject({ type: 'text', name: 'title', label: 'Title' });
+  });
   it('resolves a form closure with the field factory', () => {
     const r = defineResource({
       name: 'Post', slug: 'posts', model: {},

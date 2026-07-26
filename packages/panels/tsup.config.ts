@@ -5,5 +5,5 @@ export default defineConfig({
   format: ['esm'],
   dts: true,
   clean: true,
-  external: ['@filamentjs/core', '@filamentjs/forms', '@filamentjs/tables'],
+  external: ['@filamentjs/core', '@filamentjs/forms', '@filamentjs/tables', '@filamentjs/infolists'],
 });

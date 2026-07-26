@@ -22,7 +22,7 @@ export interface FilterNode {
   multiple?: boolean;
 }
 
-export type ActionType = 'edit' | 'delete' | 'create' | 'deleteBulk' | 'custom';
+export type ActionType = 'view' | 'edit' | 'delete' | 'create' | 'deleteBulk' | 'custom';
 
 export interface ActionNode {
   type: ActionType;
