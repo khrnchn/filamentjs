@@ -18,11 +18,12 @@ defineResource({
     columns: [t.text('title').sortable().searchable(), t.badge('status')],
     filters: [t.select('status').options({ draft: 'Draft', published: 'Published' })],
     actions: [t.editAction(), t.deleteAction()],
+    bulkActions: [t.deleteBulkAction()],
   }),
 })
 ```
 
-That config generates a list page (sort, search, filter, paginate), create and edit forms with validation, and row actions, all rendered server-side.
+That config generates a list page with linkable filters, global and per-column search, sorting, pagination, row actions, and bulk selection. It also generates create and edit forms with validation. Authorization remains server-side, with denied actions hidden from the rendered UI.
 
 ## Why
 
@@ -53,7 +54,7 @@ definePanel({ resources, nav, auth, theme })
 config (server only) ──► loader / server fn ──► { spec, data } ──► client renders
 ```
 
-The table data contract is a single server-driven boundary: the client posts `{ sort, search, filters, page, pageSize }`, the server resolves the query via Drizzle and returns `{ rows, total }`.
+The table data contract is a single server-driven boundary: the client posts `{ sort, search, columnSearches, filters, page, pageSize }`, the server resolves the query via Drizzle and returns the rows, total, resolved table spec, and index-aligned row permissions.
 
 ## Packages
 
@@ -67,7 +68,7 @@ This is a pnpm monorepo.
 | `@filamentjs/panels` | `defineResource` / `definePanel`, navigation model |
 | `apps/playground` | A TanStack Start app that dogfoods everything: Postgres, better-auth, a Posts and a Users resource |
 
-The pure packages have no React, no DB, and no framework code. They are fully unit-tested (78 tests). The Drizzle query resolver is tested against a real Postgres.
+The pure packages have no React, no DB, and no framework code. They have 130 unit tests. The playground has 24 DB-backed integration tests against a real Postgres.
 
 ## Quickstart
 
@@ -130,15 +131,16 @@ export const panel = definePanel({
 })
 ```
 
-One config drives generic `/admin/$resource` routes (list, create, edit), a sidebar shell with grouped nav, a session guard on the whole `/admin` tree, and per-resource role authorization on every data and mutation server function.
+One config drives generic `/admin/$resource` routes for list, create, edit, and view pages, a sidebar shell with grouped nav, a session guard on the whole `/admin` tree, and per-resource and per-record authorization on every data and mutation server function.
 
 ## Features
 
-- Server-driven list pages: sort, search, filter, pagination, all in SQL via Drizzle
+- Server-driven list pages: sort, global and per-column search, URL filters, and pagination, all in SQL via Drizzle
 - Config-driven forms: text, textarea, select, radio, checkbox, toggle, date, plus section/grid layout
 - Server-authoritative validation compiled from field rules to Zod
 - Conditional fields via `visible(ctx => ...)` / `disabled(ctx => ...)` predicates
-- Row, bulk, and header actions
+- Spec-driven row, bulk, and header actions with page selection and policy-aware hiding
+- Server-authoritative role and per-record authorization policies
 - better-auth sessions with the admin plugin for role-based access
 - Dark mode: follows the OS by default, with a topbar toggle that persists
 
@@ -146,18 +148,14 @@ One config drives generic `/admin/$resource` routes (list, create, edit), a side
 
 v1 covers the admin panel shell, forms, and tables. Working and dogfooded end to end.
 
-Roadmap (see `docs/superpowers/specs/`):
-
-1. Type-safe field/model binding, infer column names from the Drizzle table type so a typo is a compile error
-2. Relationship fields and joined relation columns
-3. Toasts, pending UI, and error boundaries
-4. Per-record authorization policies
+The next features are tracked in `docs/superpowers/specs/`, including custom server actions, dashboards, widgets, relation managers, and deeper form and table fields.
 
 ## Development
 
 ```bash
-make test          # 78 unit tests + Drizzle resolver tests against real Postgres
-make typecheck
+npx vitest run
+cd apps/playground && npx vitest run
+pnpm -r typecheck
 make build
 ```
 

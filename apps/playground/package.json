@@ -17,6 +17,7 @@
   "dependencies": {
     "@filamentjs/core": "workspace:^",
     "@filamentjs/forms": "workspace:^",
+    "@filamentjs/infolists": "workspace:^",
     "@filamentjs/panels": "workspace:^",
     "@filamentjs/tables": "workspace:^",
     "@radix-ui/react-checkbox": "^1.3.10",

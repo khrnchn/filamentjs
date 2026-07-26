@@ -23,6 +23,21 @@ export const postsResource = defineResource({
     f.relationSelect('authorId').label('Author').relatedTo(user, { label: 'name' }),
     f.toggle('published').label('Published').default(false),
   ],
+  infolist: (i) => [
+    i.section('Content', [
+      i.text('title').label('Title'),
+      i.text('slug').label('Slug'),
+      i.text('body').label('Body').placeholder('No body yet'),
+    ]),
+    i.section('Meta', [
+      i.grid(2, [
+        i.badge('status').label('Status').colors({ draft: 'gray', published: 'green' }),
+        i.boolean('published').label('Published'),
+        i.text('author.name').label('Author').placeholder('Unassigned'),
+        i.dateTime('createdAt').label('Created'),
+      ]),
+    ]),
+  ],
   table: (t) =>
     buildTable({
       columns: [
@@ -36,7 +51,8 @@ export const postsResource = defineResource({
         t.select('status').options({ draft: 'Draft', published: 'Published' }),
         t.ternary('published'),
       ],
-      actions: [t.editAction(), t.deleteAction()],
+      actions: [t.viewAction(), t.editAction(), t.deleteAction()],
+      bulkActions: [t.deleteBulkAction()],
       headerActions: [t.createAction()],
     }),
 });
