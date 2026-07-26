@@ -135,6 +135,12 @@ importers:
         specifier: ^3.23.0
         version: 3.25.76
 
+  packages/infolists:
+    dependencies:
+      '@filamentjs/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/panels:
     dependencies:
       '@filamentjs/core':
