@@ -14,6 +14,7 @@ type ResourceSearch = {
   dir?: 'asc' | 'desc';
   page: number;
   perPage?: number;
+  hidden?: string;
 } & Record<string, string | number | undefined>;
 
 const DEFAULT_PAGE_SIZE = 10;
@@ -26,6 +27,7 @@ export const Route = createFileRoute('/admin/$resource')({
       dir: search.dir === 'desc' ? 'desc' : search.dir === 'asc' ? 'asc' : undefined,
       page: Number(search.page) > 0 ? Number(search.page) : 1,
       perPage: Number(search.perPage) > 0 ? Number(search.perPage) : DEFAULT_PAGE_SIZE,
+      hidden: typeof search.hidden === 'string' && search.hidden ? search.hidden : undefined,
     };
 
     // The router parses "true" and "1" into a boolean or number, so filter values are
@@ -74,7 +76,7 @@ function renderCell(type: string, value: unknown) {
 
 function ResourceList() {
   const { resource } = Route.useParams();
-  const { title, spec, rows, permissions, total } = Route.useLoaderData();
+  const { title, spec, rows, permissions, total, summaries } = Route.useLoaderData();
   const searchParams = Route.useSearch();
   const { search, sort, dir, page } = searchParams;
   const perPage = searchParams.perPage ?? DEFAULT_PAGE_SIZE;
@@ -96,6 +98,25 @@ function ResourceList() {
     .map((row) => row.id);
   const allPageSelected =
     selectableIds.length > 0 && selectableIds.every((id) => selected.has(id));
+  // Hidden columns live in the URL as a comma separated list, so a toggled view is
+  // linkable. A column hidden by default starts in that set until the user says otherwise.
+  const hiddenParam = searchParams.hidden;
+  const hidden = new Set(
+    typeof hiddenParam === 'string'
+      ? hiddenParam.split(',').filter(Boolean)
+      : spec.columns.filter((column) => column.hiddenByDefault).map((column) => column.name),
+  );
+  const visibleColumns = spec.columns.filter((column) => !hidden.has(column.name));
+  const toggleableColumns = spec.columns.filter((column) => column.toggleable);
+  const summarized = spec.columns.filter((column) => column.summarize);
+
+  const toggleColumn = (name: string) => {
+    const next = new Set(hidden);
+    if (next.has(name)) next.delete(name);
+    else next.add(name);
+    navigate({ search: (previous) => ({ ...previous, hidden: [...next].join(',') || undefined }) });
+  };
+
   const activeFilters = spec.filters.flatMap((filter) => {
     const value = searchParams[`filter_${filter.name}`];
     return typeof value === 'string' && value ? [{ filter, value }] : [];
@@ -332,6 +353,47 @@ function ResourceList() {
         </div>
       )}
 
+      {(toggleableColumns.length > 0 || spec.pageSizes.length > 1) && (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 text-sm">
+          <div className="flex flex-wrap items-center gap-3">
+            {toggleableColumns.map((column) => (
+              <label key={column.name} className="flex items-center gap-1.5">
+                <input
+                  type="checkbox"
+                  checked={!hidden.has(column.name)}
+                  onChange={() => toggleColumn(column.name)}
+                />
+                <span>{column.label}</span>
+              </label>
+            ))}
+          </div>
+          {spec.pageSizes.length > 1 && (
+            <label className="flex items-center gap-2">
+              <span className="text-muted-foreground">Per page</span>
+              <select
+                value={perPage}
+                onChange={(event) =>
+                  navigate({
+                    search: (previous) => ({
+                      ...previous,
+                      perPage: Number(event.target.value),
+                      page: 1,
+                    }),
+                  })
+                }
+                className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+              >
+                {spec.pageSizes.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
+      )}
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -357,7 +419,7 @@ function ResourceList() {
                   />
                 </TableHead>
               )}
-              {spec.columns.map((column) => (
+              {visibleColumns.map((column) => (
                 <TableHead key={column.name}>
                   {column.sortable ? (
                     <Link
@@ -386,10 +448,13 @@ function ResourceList() {
             {rows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={spec.columns.length + (hasBulkActions ? 1 : 0) + (spec.actions.length ? 1 : 0)}
-                  className="text-center text-muted-foreground"
+                  colSpan={visibleColumns.length + (hasBulkActions ? 1 : 0) + (spec.actions.length ? 1 : 0)}
+                  className="py-10 text-center"
                 >
-                  No records found.
+                  <p className="font-medium">{spec.emptyState?.heading ?? 'No records found.'}</p>
+                  {spec.emptyState?.description ? (
+                    <p className="mt-1 text-sm text-muted-foreground">{spec.emptyState.description}</p>
+                  ) : null}
                 </TableCell>
               </TableRow>
             ) : (
@@ -416,7 +481,7 @@ function ResourceList() {
                         />
                       </TableCell>
                     )}
-                    {spec.columns.map((column) => (
+                    {visibleColumns.map((column) => (
                       <TableCell key={column.name}>
                         {renderCell(
                           column.type,
@@ -482,6 +547,21 @@ function ResourceList() {
               })
             )}
           </TableBody>
+          {summarized.length > 0 && summaries && rows.length > 0 && (
+            <tfoot className="border-t bg-muted/30 font-medium">
+              <TableRow>
+                {hasBulkActions && <TableCell />}
+                {visibleColumns.map((column) => (
+                  <TableCell key={column.name}>
+                    {column.summarize && summaries[column.name] !== undefined
+                      ? `${column.summarize}: ${summaries[column.name]}`
+                      : null}
+                  </TableCell>
+                ))}
+                {spec.actions.length > 0 && <TableCell />}
+              </TableRow>
+            </tfoot>
+          )}
         </Table>
       </div>
 

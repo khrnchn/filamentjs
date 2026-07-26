@@ -41,12 +41,17 @@ export const postsResource = defineResource({
   table: (t) =>
     buildTable({
       columns: [
-        t.text('title').sortable().searchable(),
-        t.text('slug').searchable(),
+        t.text('title').sortable().searchable().summarize('count'),
+        t.text('slug').searchable().toggleable(),
         t.badge('status'),
-        t.text('author.name').label('Author'),
+        t.text('author.name').label('Author').toggleable({ hiddenByDefault: true }),
         t.boolean('published').sortable(),
       ],
+      pageSizes: [5, 10, 25],
+      emptyState: {
+        heading: 'No posts match this view',
+        description: 'Clear the filters, or create the first post.',
+      },
       filters: [
         t.select('status').options({ draft: 'Draft', published: 'Published' }),
         t.ternary('published'),

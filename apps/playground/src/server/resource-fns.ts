@@ -28,6 +28,7 @@ export interface ListResponse {
   rows: Record<string, Cell>[];
   permissions: Array<{ update: boolean; delete: boolean }>;
   total: number;
+  summaries?: Record<string, number>;
   spec: TableSpec;
 }
 
@@ -152,6 +153,7 @@ export const listResource = createServerFn({ method: 'GET' })
         delete: authorizeResource(resource, 'delete', { user, record }),
       })),
       total: result.total,
+      summaries: result.summaries,
       spec: {
         ...spec,
         headerActions: authorizeResource(resource, 'create', { user })
