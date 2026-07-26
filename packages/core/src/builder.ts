@@ -23,6 +23,6 @@ export class NodeBuilder<N extends SchemaNode> {
   }
 
   build(): N {
-    return this.node as N;
+    return { ...this.node } as N;
   }
 }

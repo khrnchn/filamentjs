@@ -13,6 +13,13 @@ describe('NodeBuilder', () => {
     expect(node.visible).toBe(pred);
     expect(node.columnSpan).toBe(2);
   });
+  it('build() returns a copy, not the live node', () => {
+    const b = new NodeBuilder<SchemaNode>('text');
+    const first = b.build();
+    b.columnSpan(2);
+    expect(first.columnSpan).toBeUndefined();
+    expect(b.build()).not.toBe(first);
+  });
   it('returns this for chaining', () => {
     const b = new NodeBuilder<SchemaNode>('text');
     expect(b.disabled(true)).toBe(b);

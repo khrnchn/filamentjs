@@ -13,7 +13,8 @@ export function compileField(field: FormFieldNode): z.ZodTypeAny {
   if (BOOLEAN_TYPES.has(field.type)) {
     schema = z.boolean();
   } else if (ARRAY_TYPES.has(field.type)) {
-    schema = z.array(z.string());
+    // an empty selection is not a selection
+    schema = required ? z.array(z.string()).min(1) : z.array(z.string());
   } else {
     let str = z.string();
     for (const rule of field.rules) {

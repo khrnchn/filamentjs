@@ -49,12 +49,23 @@ function filterSpec(filter: FilterNode): FilterSpec {
   return spec;
 }
 
+// The spec crosses the server/client boundary, so actions are rebuilt from known
+// keys instead of passed through (a stray handler function would break serialization).
+function actionSpec(action: ActionNode): ActionNode {
+  const spec: ActionNode = { type: action.type, name: action.name };
+  if (action.label !== undefined) spec.label = action.label;
+  if (action.icon !== undefined) spec.icon = action.icon;
+  if (action.requiresConfirmation) spec.requiresConfirmation = true;
+  if (action.destructive) spec.destructive = true;
+  return spec;
+}
+
 export function resolveTableSpec(config: TableConfig): TableSpec {
   return {
     columns: config.columns.map(columnSpec),
     filters: config.filters.map(filterSpec),
-    actions: config.actions,
-    bulkActions: config.bulkActions,
-    headerActions: config.headerActions,
+    actions: config.actions.map(actionSpec),
+    bulkActions: config.bulkActions.map(actionSpec),
+    headerActions: config.headerActions.map(actionSpec),
   };
 }

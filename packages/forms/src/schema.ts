@@ -1,4 +1,4 @@
-import { getPath } from '@filamentjs/core';
+import { createCtx, createStore, getPath, isNodeVisible } from '@filamentjs/core';
 import type { SchemaNode } from '@filamentjs/core';
 import type { AnyBuilder } from './layout.js';
 import type { FormFieldNode } from './types.js';
@@ -28,19 +28,34 @@ export function hydrate(
   for (const field of collectFields(nodes)) {
     const fromRecord = record ? getPath(record, field.name) : undefined;
     const value = fromRecord !== undefined ? fromRecord : field.default;
-    if (value !== undefined) state[field.name] = value;
+    // clone objects/arrays so form state never aliases the record or the field default
+    if (value !== undefined) {
+      state[field.name] = typeof value === 'object' && value !== null ? structuredClone(value) : value;
+    }
   }
   return state;
 }
 
+// Hidden fields (and everything under a hidden layout) never reach the payload:
+// what the user cannot see, they cannot submit.
 export function dehydrate(
   nodes: SchemaNode[],
   values: Record<string, unknown>,
 ): Record<string, unknown> {
+  const ctx = createCtx(createStore(values));
   const payload: Record<string, unknown> = {};
-  for (const field of collectFields(nodes)) {
-    const value = values[field.name];
-    if (value !== undefined) payload[field.name] = value;
-  }
+
+  const walk = (list: SchemaNode[]) => {
+    for (const node of list) {
+      if (!isNodeVisible(node, ctx)) continue;
+      if (isField(node)) {
+        const value = values[node.name];
+        if (value !== undefined) payload[node.name] = value;
+      }
+      if (node.children) walk(node.children);
+    }
+  };
+
+  walk(nodes);
   return payload;
 }

@@ -28,6 +28,11 @@ describe('compileValidation', () => {
     expect(schema.safeParse({ active: 'yes' }).success).toBe(false);
     expect(schema.safeParse({ active: true }).success).toBe(true);
   });
+  it('rejects an empty array for a required multiSelect', () => {
+    const schema = compileValidation(buildSchema([f.multiSelect('tags').required()]));
+    expect(schema.safeParse({ tags: [] }).success).toBe(false);
+    expect(schema.safeParse({ tags: ['a'] }).success).toBe(true);
+  });
   it('ignores the unique rule at compile time', () => {
     const schema = compileValidation(buildSchema([f.text('email').required().unique()]));
     expect(schema.safeParse({ email: 'a@b.co' }).success).toBe(true);

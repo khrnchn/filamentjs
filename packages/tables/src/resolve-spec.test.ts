@@ -39,4 +39,12 @@ describe('resolveTableSpec', () => {
     expect(spec.filters[0]).toMatchObject({ name: 'role', label: 'Role', options: { a: 'A' } });
     expect(spec.actions[0]).toMatchObject({ type: 'edit' });
   });
+  it('keeps only serializable action keys', () => {
+    const action = { type: 'custom', name: 'archive', label: 'Archive', handler: () => 'nope' };
+    const config = buildTable({ columns: [t.text('title')] });
+    config.actions = [action as unknown as (typeof config.actions)[number]];
+    const spec = resolveTableSpec(config);
+    expect(spec.actions[0]).toEqual({ type: 'custom', name: 'archive', label: 'Archive' });
+    expect(() => JSON.stringify(spec)).not.toThrow();
+  });
 });

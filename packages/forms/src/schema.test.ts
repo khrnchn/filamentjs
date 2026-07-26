@@ -28,6 +28,12 @@ describe('hydrate', () => {
     const state = hydrate(buildSchema(builders), { name: 'Ada' });
     expect(state).toEqual({ name: 'Ada', active: false });
   });
+  it('does not alias object values from the record', () => {
+    const record = { tags: ['a'] };
+    const state = hydrate(buildSchema([f.multiSelect('tags')]), record);
+    (state.tags as string[]).push('b');
+    expect(record.tags).toEqual(['a']);
+  });
   it('applies defaults with no record', () => {
     expect(hydrate(buildSchema(builders))).toEqual({ name: 'Anon', active: false });
   });
@@ -37,5 +43,21 @@ describe('dehydrate', () => {
   it('collects current field values, skipping undefined', () => {
     const payload = dehydrate(buildSchema(builders), { name: 'Ada', active: true });
     expect(payload).toEqual({ name: 'Ada', active: true });
+  });
+  it('skips fields hidden by their own visible prop', () => {
+    const nodes = buildSchema([f.text('name'), f.text('secret').visible(false)]);
+    expect(dehydrate(nodes, { name: 'Ada', secret: 'shh' })).toEqual({ name: 'Ada' });
+  });
+  it('skips fields inside a hidden layout', () => {
+    const nodes = buildSchema([f.section('Meta', [f.text('secret')]).visible(false)]);
+    expect(dehydrate(nodes, { secret: 'shh' })).toEqual({});
+  });
+  it('evaluates visibility against the current values', () => {
+    const nodes = buildSchema([
+      f.toggle('advanced'),
+      f.text('threshold').visible((ctx) => ctx.get('advanced') === true),
+    ]);
+    expect(dehydrate(nodes, { advanced: false, threshold: '10' })).toEqual({ advanced: false });
+    expect(dehydrate(nodes, { advanced: true, threshold: '10' })).toEqual({ advanced: true, threshold: '10' });
   });
 });

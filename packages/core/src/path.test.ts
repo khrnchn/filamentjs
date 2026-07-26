@@ -12,6 +12,10 @@ describe('getPath', () => {
     expect(getPath({ author: {} }, 'author.name')).toBeUndefined();
     expect(getPath({}, 'a.b.c')).toBeUndefined();
   });
+  it('does not read inherited properties', () => {
+    expect(getPath({}, 'toString')).toBeUndefined();
+    expect(getPath({}, 'constructor.name')).toBeUndefined();
+  });
 });
 
 describe('setPath', () => {
@@ -29,5 +33,14 @@ describe('setPath', () => {
     const o: Record<string, unknown> = { author: { name: 'Ada' } };
     setPath(o, 'author.name', 'Grace');
     expect(o).toEqual({ author: { name: 'Grace' } });
+  });
+  it('ignores prototype-polluting paths', () => {
+    const o: Record<string, unknown> = {};
+    setPath(o, '__proto__.polluted', 'yes');
+    setPath(o, 'constructor.prototype.polluted', 'yes');
+    setPath(o, 'prototype', 'yes');
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    expect(Object.prototype).not.toHaveProperty('polluted');
+    expect(o).toEqual({});
   });
 });
