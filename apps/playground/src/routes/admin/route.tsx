@@ -7,8 +7,8 @@ import {
   useRouterState,
   type ErrorComponentProps,
 } from '@tanstack/react-router';
-import { panel } from '~/filament/panel';
 import { getSession } from '~/server/session';
+import { getPanelChrome } from '~/server/panel-fns';
 import { authClient } from '~/lib/auth-client';
 import { Button } from '~/components/ui/button';
 import { ErrorPanel } from '~/components/error-panel';
@@ -18,14 +18,16 @@ export const Route = createFileRoute('/admin')({
   beforeLoad: async () => {
     const session = await getSession();
     if (!session) throw redirect({ to: '/login' });
-    return { session };
+    // chrome comes from the server so the client never imports the panel module,
+    // which reaches Drizzle models and action handlers through the resources
+    return { session, chrome: await getPanelChrome() };
   },
   errorComponent: AdminShell,
   component: AdminShell,
 });
 
 function AdminShell({ error, reset }: Partial<ErrorComponentProps> = {}) {
-  const { session } = Route.useRouteContext();
+  const { session, chrome } = Route.useRouteContext();
   const navigate = useNavigate();
   const isLoading = useRouterState({ select: (state) => state.isLoading });
 
@@ -37,9 +39,9 @@ function AdminShell({ error, reset }: Partial<ErrorComponentProps> = {}) {
   return (
     <div className="flex min-h-screen">
       <aside className="w-60 shrink-0 border-r bg-muted/20">
-        <div className="border-b px-4 py-4 text-lg font-semibold">{panel.brand}</div>
+        <div className="border-b px-4 py-4 text-lg font-semibold">{chrome.brand}</div>
         <nav className="p-3">
-          {panel.nav.map((group, gi) => (
+          {chrome.nav.map((group, gi) => (
             <div key={gi} className="mb-4">
               {group.label ? (
                 <div className="px-2 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
