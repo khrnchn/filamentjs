@@ -80,4 +80,30 @@ describe('dehydrate', () => {
     expect(dehydrate(nodes, { advanced: false, threshold: '10' })).toEqual({ advanced: false });
     expect(dehydrate(nodes, { advanced: true, threshold: '10' })).toEqual({ advanced: true, threshold: '10' });
   });
+
+describe('repeater state', () => {
+  const nodes = () =>
+    buildSchema([f.repeater('links', [f.text('label'), f.text('url')]).label('Links')]);
+
+  it('treats the repeater as one field rather than leaking its children', () => {
+    expect(collectFields(nodes()).map((field) => field.name)).toEqual(['links']);
+  });
+
+  it('hydrates the whole array from the record', () => {
+    const record = { links: [{ label: 'Home', url: '/' }] };
+    expect(hydrate(nodes(), record)).toEqual({ links: [{ label: 'Home', url: '/' }] });
+  });
+
+  it('does not alias the record array', () => {
+    const record = { links: [{ label: 'Home', url: '/' }] };
+    const state = hydrate(nodes(), record);
+    (state.links as Array<{ label: string }>)[0]!.label = 'Changed';
+    expect(record.links[0]!.label).toBe('Home');
+  });
+
+  it('dehydrates the array back out', () => {
+    const values = { links: [{ label: 'Docs', url: '/docs' }] };
+    expect(dehydrate(nodes(), values)).toEqual(values);
+  });
+});
 });

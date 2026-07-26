@@ -23,6 +23,14 @@ export const postsResource = defineResource({
       .live(),
     f.textarea('body').label('Body').visible((ctx) => ctx.get('status') === 'draft'),
     f.relationSelect('authorId').label('Author').relatedTo(user, { label: 'name' }),
+    f
+      .repeater('links', (row) => [
+        row.text('label').label('Label').required(),
+        row.text('url').label('URL'),
+      ])
+      .label('Links')
+      .maxItems(5)
+      .itemLabel('label'),
     f.toggle('published').label('Published').default(false),
   ],
   infolist: (i) => [

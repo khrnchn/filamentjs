@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { getPath, setPath } from '@filamentjs/core';
 import type { ResolvedNode } from '@filamentjs/forms';
 import { Input } from '~/components/ui/input';
 import { Textarea } from '~/components/ui/textarea';
@@ -44,7 +45,9 @@ export function FormRenderer({
 
   const setValue = (node: ResolvedNode, value: unknown) => {
     if (!node.name) return;
-    const nextValues = { ...valuesRef.current, [node.name]: value };
+    // names can be nested ("meta.author") or row scoped ("links.0.label"), so write by path
+    const nextValues = structuredClone(valuesRef.current);
+    setPath(nextValues, node.name, value);
     valuesRef.current = nextValues;
     setValues(nextValues);
 
@@ -95,7 +98,63 @@ export function FormRenderer({
     if (!name) return null;
 
     const error = errors?.[name];
-    const value = values[name];
+    const value = getPath(values, name);
+
+    if (node.type === 'repeater') {
+      const rows = Array.isArray(value) ? (value as unknown[]) : [];
+      const atMax = node.maxItems !== undefined && rows.length >= node.maxItems;
+      const atMin = node.minItems !== undefined && rows.length <= node.minItems;
+
+      const writeRows = (next: unknown[]) => {
+        const nextValues = structuredClone(valuesRef.current);
+        setPath(nextValues, name, next);
+        valuesRef.current = nextValues;
+        setValues(nextValues);
+      };
+
+      return (
+        <div key={key} className="flex flex-col gap-2">
+          {node.label ? <span className="text-sm font-medium">{node.label}</span> : null}
+          <div className="flex flex-col gap-3">
+            {(node.rows ?? []).map((rowNodes, index) => (
+              <div key={index} className="rounded-md border p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    {node.itemLabel
+                      ? String(
+                          (rows[index] as Record<string, unknown> | undefined)?.[node.itemLabel] ??
+                            `Item ${index + 1}`,
+                        )
+                      : `Item ${index + 1}`}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={atMin}
+                    onClick={() => writeRows(rows.filter((_, i) => i !== index))}
+                    className="text-xs text-destructive hover:underline disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <div className="flex flex-col gap-3">{rowNodes.map(renderNode)}</div>
+              </div>
+            ))}
+          </div>
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={atMax}
+              onClick={() => writeRows([...rows, {}])}
+            >
+              Add
+            </Button>
+          </div>
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        </div>
+      );
+    }
 
     let control: React.ReactNode;
     if (node.type === 'textarea') {

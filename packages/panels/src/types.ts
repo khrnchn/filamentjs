@@ -1,4 +1,4 @@
-import type { AnyBuilder, f } from '@filamentjs/forms';
+import type { AnyBuilder, RowFields, f } from '@filamentjs/forms';
 import type { TableConfig, t } from '@filamentjs/tables';
 import type { i } from '@filamentjs/infolists';
 
@@ -30,7 +30,17 @@ type ActionNames<Actions> = [Actions] extends [never]
     ? string
     : keyof Actions & string;
 
-export type Fields<Model, Relations = unknown> = ScopedNames<typeof f, Names<Model, Relations>>;
+// `f.repeater` names a model column, but its row fields are keys inside that column's
+// stored rows, so the children keep the unnarrowed factory.
+export type Fields<Model, Relations = unknown> = Omit<
+  ScopedNames<typeof f, Names<Model, Relations>>,
+  'repeater'
+> & {
+  repeater(
+    name: Names<Model, Relations>,
+    children: AnyBuilder[] | ((row: RowFields) => AnyBuilder[]),
+  ): ReturnType<typeof f.repeater>;
+};
 export type Columns<Model, Relations = unknown, Actions = unknown> = Omit<
   ScopedNames<typeof t, Names<Model, Relations>>,
   'action'

@@ -58,4 +58,30 @@ describe('resolveSchema', () => {
     });
     expect(JSON.stringify(spec)).not.toContain('"model"');
   });
+  it('resolves one set of nodes per repeater row, with row scoped names', () => {
+    const nodes = buildSchema([f.repeater('links', [f.text('label'), f.text('url')])]);
+    const [spec] = resolveSchema(nodes, {
+      links: [
+        { label: 'Home', url: '/' },
+        { label: 'Docs', url: '/docs' },
+      ],
+    });
+    expect(spec!.type).toBe('repeater');
+    expect(spec!.rows).toHaveLength(2);
+    expect(spec!.rows![0]!.map((node) => node.name)).toEqual(['links.0.label', 'links.0.url']);
+    expect(spec!.rows![1]!.map((node) => node.name)).toEqual(['links.1.label', 'links.1.url']);
+  });
+  it('evaluates a row closure against that row, not the parent', () => {
+    const nodes = buildSchema([
+      f.repeater('links', [
+        f.text('label'),
+        f.text('url').visible((ctx) => ctx.get('label') === 'Home'),
+      ]),
+    ]);
+    const [spec] = resolveSchema(nodes, {
+      links: [{ label: 'Home' }, { label: 'Docs' }],
+    });
+    expect(spec!.rows![0]![1]!.visible).toBe(true);
+    expect(spec!.rows![1]![1]!.visible).toBe(false);
+  });
 });

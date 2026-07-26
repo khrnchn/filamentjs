@@ -1,5 +1,6 @@
 import { NodeBuilder } from '@filamentjs/core';
 import type { Prop } from '@filamentjs/core';
+import type { AnyBuilder } from './layout.js';
 import type { FormFieldNode } from './types.js';
 
 export class FieldBuilder<N extends FormFieldNode = FormFieldNode> extends NodeBuilder<N> {
@@ -79,5 +80,35 @@ export class RelationSelectFieldBuilder extends SelectFieldBuilder {
       valueColumn: opts.value ?? 'id',
     };
     return this;
+  }
+}
+
+// A repeater owns the state under its own name: an array of row objects, with its
+// children acting as the template for each row.
+export class RepeaterFieldBuilder extends FieldBuilder {
+  private childBuilders: AnyBuilder[];
+
+  constructor(name: string, children: AnyBuilder[]) {
+    super('repeater', name);
+    this.childBuilders = children;
+  }
+
+  minItems(n: number): this {
+    this.node.minItems = n;
+    return this;
+  }
+
+  maxItems(n: number): this {
+    this.node.maxItems = n;
+    return this;
+  }
+
+  itemLabel(fieldName: string): this {
+    this.node.itemLabel = fieldName;
+    return this;
+  }
+
+  build(): FormFieldNode {
+    return { ...this.node, children: this.childBuilders.map((c) => c.build()) };
   }
 }

@@ -11,10 +11,16 @@ function isField(node: SchemaNode): node is FormFieldNode {
   return typeof (node as FormFieldNode).name === 'string';
 }
 
+// A named node with children (a repeater) owns everything beneath it, so its children
+// are a row template rather than fields in their own right. Layout nodes have no name
+// and are transparent, so collection carries on through them.
 export function collectFields(nodes: SchemaNode[]): FormFieldNode[] {
   const out: FormFieldNode[] = [];
   for (const node of nodes) {
-    if (isField(node)) out.push(node);
+    if (isField(node)) {
+      out.push(node);
+      continue;
+    }
     if (node.children) out.push(...collectFields(node.children));
   }
   return out;
@@ -55,6 +61,7 @@ export function dehydrate(
       if (isField(node)) {
         const value = getPath(values, node.name);
         if (value !== undefined) setPath(payload, node.name, value);
+        continue;
       }
       if (node.children) walk(node.children);
     }

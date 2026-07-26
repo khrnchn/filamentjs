@@ -61,4 +61,19 @@ describe('compileValidation', () => {
     const schema = compileValidation(buildSchema([f.text('email').required().unique()]));
     expect(schema.safeParse({ email: 'a@b.co' }).success).toBe(true);
   });
+  it('validates a repeater as an array of row objects', () => {
+    const schema = compileValidation(
+      buildSchema([f.repeater('links', [f.text('label').required(), f.text('url')]).minItems(1)]),
+    );
+    expect(schema.safeParse({ links: [{ label: 'Home', url: '/' }] }).success).toBe(true);
+    expect(schema.safeParse({ links: [] }).success).toBe(false);
+    expect(schema.safeParse({ links: [{ url: '/' }] }).success).toBe(false);
+  });
+  it('enforces maxItems on a repeater', () => {
+    const schema = compileValidation(
+      buildSchema([f.repeater('links', [f.text('label')]).maxItems(1)]),
+    );
+    expect(schema.safeParse({ links: [{ label: 'a' }] }).success).toBe(true);
+    expect(schema.safeParse({ links: [{ label: 'a' }, { label: 'b' }] }).success).toBe(false);
+  });
 });

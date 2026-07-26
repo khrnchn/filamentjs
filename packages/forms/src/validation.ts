@@ -9,6 +9,18 @@ const BOOLEAN_TYPES = new Set(['checkbox', 'toggle']);
 export function compileField(field: FormFieldNode): z.ZodTypeAny {
   const required = field.rules.some((r) => r.name === 'required');
 
+  // A repeater validates as a list of row objects built from its child template.
+  if (field.type === 'repeater') {
+    const shape: Record<string, z.ZodTypeAny> = {};
+    for (const child of (field.children ?? []) as FormFieldNode[]) {
+      if (typeof child.name === 'string') shape[child.name] = compileField(child);
+    }
+    let rows = z.array(z.object(shape));
+    if (field.minItems !== undefined) rows = rows.min(field.minItems);
+    if (field.maxItems !== undefined) rows = rows.max(field.maxItems);
+    return required ? rows : rows.optional();
+  }
+
   let schema: z.ZodTypeAny;
   if (BOOLEAN_TYPES.has(field.type)) {
     schema = z.boolean();

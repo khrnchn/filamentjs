@@ -2,7 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { getResourceView } from '~/server/resource-fns';
 import { InfolistRenderer } from '~/filament/infolist-renderer';
 
-export const Route = createFileRoute('/admin/$resource_/$id')({
+export const Route = createFileRoute('/admin/$resource_/$id/')({
   loader: ({ params }) => getResourceView({ data: { slug: params.resource, id: params.id } }),
   component: ViewRecord,
 });
