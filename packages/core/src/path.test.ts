@@ -34,6 +34,18 @@ describe('setPath', () => {
     setPath(o, 'author.name', 'Grace');
     expect(o).toEqual({ author: { name: 'Grace' } });
   });
+  it('creates arrays for numeric segments', () => {
+    const o: Record<string, unknown> = {};
+    setPath(o, 'links.0.label', 'Home');
+    setPath(o, 'links.1.label', 'Docs');
+    expect(Array.isArray(o.links)).toBe(true);
+    expect(o).toEqual({ links: [{ label: 'Home' }, { label: 'Docs' }] });
+  });
+  it('keeps an existing array when writing into it', () => {
+    const o: Record<string, unknown> = { links: [{ label: 'Home' }] };
+    setPath(o, 'links.0.url', '/');
+    expect(o).toEqual({ links: [{ label: 'Home', url: '/' }] });
+  });
   it('ignores prototype-polluting paths', () => {
     const o: Record<string, unknown> = {};
     setPath(o, '__proto__.polluted', 'yes');

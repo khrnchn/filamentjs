@@ -21,7 +21,8 @@ export function setPath(obj: Record<string, unknown>, path: string, value: unkno
     const seg = segs[i]!;
     const next = cur[seg];
     if (next == null || typeof next !== 'object') {
-      cur[seg] = {};
+      // a numeric next segment means this level is a list, as repeater rows are
+      cur[seg] = /^\d+$/.test(segs[i + 1]!) ? [] : {};
     }
     cur = cur[seg] as Record<string, unknown>;
   }

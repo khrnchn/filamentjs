@@ -65,6 +65,15 @@ export interface ResourcePolicies<Model = unknown> {
   delete?(ctx: PolicyContext<Model>): boolean;
 }
 
+export interface RelationManager<Related = unknown> {
+  slug: string;
+  title: string;
+  model: Related;
+  foreignKey: string;
+  table: TableConfig | ((t: Columns<Related>) => TableConfig);
+  form?: AnyBuilder[] | ((f: Fields<Related>) => AnyBuilder[]);
+}
+
 export interface NavMeta {
   group?: string;
   icon?: string;
@@ -85,6 +94,7 @@ export interface ResourceInput<Model = unknown, Relations = unknown, Actions = u
   // handlers the table refers to by name through t.action(...). The intersection keeps
   // Actions inferring from the literal while still constraining what a handler looks like.
   actions?: Actions & Record<string, ResourceAction<Model>>;
+  relationManagers?: RelationManager[];
   nav?: NavMeta;
   roles?: string[];
   can?: ResourcePolicies<Model>;
@@ -100,6 +110,7 @@ export interface Resource<Model = unknown> {
   table: TableConfig;
   infolist: AnyBuilder[];
   actions: Record<string, ResourceAction<Model>>;
+  relationManagers: RelationManager[];
   nav: NavMeta;
   roles: string[];
   can: ResourcePolicies<Model>;

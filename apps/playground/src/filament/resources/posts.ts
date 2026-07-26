@@ -2,7 +2,7 @@ import { defineResource } from '@filamentjs/panels';
 import { buildTable } from '@filamentjs/tables';
 import { eq } from 'drizzle-orm';
 import { db } from '~/db/client';
-import { posts, user } from '~/db/schema';
+import { comments, posts, user } from '~/db/schema';
 
 export const postsResource = defineResource({
   name: 'Post',
@@ -58,6 +58,32 @@ export const postsResource = defineResource({
       },
     },
   },
+  relationManagers: [
+    {
+      slug: 'comments',
+      title: 'Comments',
+      model: comments,
+      foreignKey: 'postId',
+      form: (f) => [
+        f.text('author').label('Author').required(),
+        f.textarea('body').label('Comment').required(),
+        f.toggle('approved').label('Approved').default(false),
+      ],
+      table: (t) =>
+        buildTable({
+          columns: [
+            t.text('author').sortable(),
+            t.text('body'),
+            t.boolean('approved').sortable(),
+            t.text('createdAt').label('Created').sortable(),
+          ],
+          actions: [t.editAction(), t.deleteAction()],
+          headerActions: [t.createAction()],
+          pageSizes: [5, 10, 25],
+          emptyState: { heading: 'No comments yet' },
+        }),
+    },
+  ],
   table: (t) =>
     buildTable({
       columns: [

@@ -8,6 +8,7 @@ import type {
   Fields,
   Columns,
   Entries,
+  RelationManager,
 } from './types.js';
 
 export function defineResource<Model, Relations = unknown, Actions = unknown>(
@@ -29,6 +30,17 @@ export function defineResource<Model, Relations = unknown, Actions = unknown>(
         ? input.infolist(i as Entries<Model, Relations>)
         : (input.infolist ?? []),
     actions: (input.actions ?? {}) as Record<string, ResourceAction<Model>>,
+    relationManagers: (input.relationManagers ?? []).map((manager) => ({
+      ...manager,
+      table:
+        typeof manager.table === 'function'
+          ? manager.table(t as unknown as Columns<unknown>)
+          : manager.table,
+      form:
+        typeof manager.form === 'function'
+          ? manager.form(f as Fields<unknown>)
+          : (manager.form ?? []),
+    })) as RelationManager[],
     nav: input.nav ?? {},
     roles: input.roles ?? [],
     can: input.can ?? {},

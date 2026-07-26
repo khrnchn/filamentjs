@@ -2,16 +2,24 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { getResourceForm, resolveForm, saveResource, type FormCell } from '~/server/resource-fns';
 import { FormRenderer } from '~/filament/form-renderer';
+import { RelationManagerTabs } from '~/filament/relation-manager';
+import { listRelationManagers } from '~/server/relation-fns';
 import { useToast } from '~/components/toaster';
 
 export const Route = createFileRoute('/admin/$resource_/$id/edit')({
-  loader: ({ params }) => getResourceForm({ data: { slug: params.resource, id: params.id } }),
+  loader: async ({ params }) => {
+    const [form, relations] = await Promise.all([
+      getResourceForm({ data: { slug: params.resource, id: params.id } }),
+      listRelationManagers({ data: { slug: params.resource, id: params.id } }),
+    ]);
+    return { ...form, relations };
+  },
   component: EditRecord,
 });
 
 function EditRecord() {
   const { resource, id } = Route.useParams();
-  const { title, spec, values } = Route.useLoaderData();
+  const { title, spec, values, relations } = Route.useLoaderData();
   const navigate = useNavigate();
   const toast = useToast();
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -50,6 +58,7 @@ function EditRecord() {
           return result.spec;
         }}
       />
+      <RelationManagerTabs resource={resource} id={id} relations={relations} />
     </div>
   );
 }

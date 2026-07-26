@@ -57,4 +57,44 @@ describe('defineResource', () => {
     });
     expect(r.table.columns).toEqual([expect.objectContaining({ name: 'title', sortable: true })]);
   });
+  it('defaults relation managers and resolves their table and form closures', () => {
+    const base = { name: 'Post', slug: 'posts', model: {}, form: [], table };
+    expect(defineResource(base).relationManagers).toEqual([]);
+
+    const comments = { name: 'comments' };
+    const r = defineResource({
+      ...base,
+      relationManagers: [
+        {
+          slug: 'comments',
+          title: 'Comments',
+          model: comments,
+          foreignKey: 'postId',
+          table: (tt) => buildTable({ columns: [tt.text('author').sortable()] }),
+          form: (ff) => [ff.textarea('body').required()],
+        },
+      ],
+    });
+
+    expect(r.relationManagers).toHaveLength(1);
+    const manager = r.relationManagers[0]!;
+    expect(manager).toMatchObject({
+      slug: 'comments',
+      title: 'Comments',
+      model: comments,
+      foreignKey: 'postId',
+    });
+    expect(typeof manager.table).not.toBe('function');
+    if (typeof manager.table === 'function') throw new Error('table closure was not resolved');
+    expect(manager.table.columns).toEqual([
+      expect.objectContaining({ name: 'author', sortable: true }),
+    ]);
+    expect(typeof manager.form).not.toBe('function');
+    if (typeof manager.form === 'function') throw new Error('form closure was not resolved');
+    expect(manager.form).toHaveLength(1);
+    expect(manager.form![0]!.build()).toMatchObject({
+      type: 'textarea',
+      name: 'body',
+    });
+  });
 });
